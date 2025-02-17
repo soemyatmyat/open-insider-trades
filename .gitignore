@@ -1,0 +1,25 @@
+#Ignore Mac System files
+.DS_store 
+.vscode
+
+#Ignore these folders
+__pycache__
+venv
+specifications
+
+#Ignore environment files
+*.env 
+
+#Ignore SASS config files
+.sass-cache
+
+#Ignore the log files
+*.log
+
+#Ignore images
+*.png
+*.jpg
+
+#Ignore these files
+schema.sql
+insider_trades.db
