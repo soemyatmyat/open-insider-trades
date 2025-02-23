@@ -5,14 +5,15 @@ This project provides API endpoints to retrieve insider transactions (SEC Form 4
 ### Functionalities
 
 #### API 
-Swagger documentation: [to-link]
+Swagger documentation: [to-link] 
 Filter trades by
 - [ ] Ticker: 
 - [ ] Trade Type:  
 - [ ] Date Range:  
+- [X] Ticker and Date Range:
 
 #### Admin Feature (login required)
-- [ ] Force refresh (Wipe the data clean if there is any, and proceed with the bootstrapping)
+- [X] Force refresh (Wipe the data clean if there is any, and proceed with the bootstrapping)
 - [ ] Daily Sync (enable/disable with the timer)
 - [ ] Dump the data into csv
 - [ ] Load the data from csv (Be careful as this action overwrites the existing data)
@@ -21,7 +22,7 @@ Filter trades by
 - **Daily sync** is enabled, by default, and therefore, the new data is fetched and processed everyday at midnight GMT/UTC epoch time. 
 
 ### How to run locally
-
+<placeholder>
 
 ### File Structure
 ```
@@ -31,11 +32,11 @@ open-insider-trades/
 ├── db.py                     # Database connection setup
 ├── models/                   # Database models      
 │   └── transaction.py        
-├── schemas/                  # Request & response schemas for Pydantic and openAPI-Doc Generation  
+├── schemas/                  # Request & response schemas for Pydantic, OpenAPI Generation  
 │   └── transaction.py        
 ├── routers/                  # API route handlers       
-│   └── transacts.py    
-├── routers/                  # Services     
+│   └── transaction.py    
+├── services/                 # Fetch, preprocess and prepare the data       
 │   └── transaction.py         
 ├── internal/                 # Internal/private routes for the admin module      
 │   └── admin.py              
@@ -44,7 +45,9 @@ open-insider-trades/
 ├── .env                      # Environment variables
 ├── .dockerignore             # Ignore unnecessary files in Docker build
 ├── .gitignore                # Ignore unnecessary files in Git
-└── build.sh                  # Documentation
+├── build.sh                  # shell script to run the app locally
 └── README.md                 # Documentation
 ```
 
+### References
+This project follows the best practice of (the Twelve-Factor App)[https://12factor.net/logs] amd treat logs as event streams. 
