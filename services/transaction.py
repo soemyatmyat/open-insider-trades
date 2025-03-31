@@ -52,21 +52,21 @@ def clear_data(db: Session):
         print(f"Error clearing transaction data: {str(e)}")
         raise
 
-def bootstrap_data(db: Session, start_year: int):
+def bootstrap_data(db: Session, start_year: int, daily_sync):
   """
   Initializes the data extraction process.
   Parameters: db (Session) which is the database session.
   Returns: None
   """
   try: 
-    if extract_data(start_year):
-      import_data(db)
+    if extract_data(start_year, daily_sync): # Extract data from the source
+      import_data(db) # Import data into the database
     print("Bootstrap completed successfully!")
   except Exception as e:
     print(f"Bootstrap failed with the error: {e}.")
     raise
 
-def extract_data(start_year: int):
+def extract_data(start_year: int, daily_sync: bool = False):
   """
   Extract the data from openinsider.com
   Parameters: None
@@ -87,10 +87,16 @@ def extract_data(start_year: int):
       for year in range(start_year, current_year + 1):
         start_month = 1 if year != 2013 else 3
         end_month = current_month if year == current_year else 12
+        if daily_sync and year == current_year: # for daily sync only
+          start_month = current_month
         for month in range(start_month, end_month + 1):
-          start_date = datetime(year, month, 1).strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
-          end_date = datetime(year, month, current_day - 1) if month == end_month else (datetime(year, month, 1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-          end_date = end_date.strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
+          if daily_sync and year == current_year and month == current_month: # for daily sync only
+            start_date = end_date = datetime(year, month, current_day).strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
+          else:
+            start_date = datetime(year, month, 1).strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
+            end_date = datetime(year, month, current_day - 1) if month == end_month else (datetime(year, month, 1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+            end_date = end_date.strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
+
           futures.append(executor.submit(scrape_data_by_date_range, start_date, end_date))
 
           # Process futures as they complete
@@ -104,22 +110,27 @@ def extract_data(start_year: int):
 
         # Write to CSV
         try: 
-          with open(settings.OUTPUT_FILE, 'w', newline='') as f:
+          if daily_sync: # for daily sync
+             filename = f"openinsider_{current_year}_{current_month}_{current_day}.csv"
+          else: # for bootstrap 
+              filename = settings.OUTPUT_FILE # for bootstrap 
+          with open(filename, 'w', newline='') as f:
             print("Writing to CSV file...")
             writer = csv.writer(f)
             writer.writerow(COLUMN_HEADERS)
             writer.writerows(data)
-          print(f"CSV file '{settings.OUTPUT_FILE}' saved successfully!")
+          print(f"CSV file '{filename}' saved successfully!")
         except IOError as e:
           raise IOError(f"Error writing to CSV file: {str(e)}")
   except Exception as e:
     print(f"Unexpected error in extract_data: {str(e)}")
-    return False
-  return True 
+    raise
+  return True  # return True if the extraction was successful
 
 def scrape_data_by_date_range(start_date, end_date):
-  # url = f'http://openinsider.com/screener?fd=-{fd}&fdr={start_date}+-+{end_date}&td={td}&cnt=5000&page=1' # this should be moved to the config file
+  # url = f'http://openinsider.com/screener?fd=-{fd}&fdr={start_date}+-+{end_date}&td={td}&cnt=5000&page=1' # sample
   url = f"{settings.BASE_URL}?fd=-{settings.DEFAULT_FILLING_DAYS}&fdr={start_date}+-+{end_date}&td={settings.TRADE_DATE_FILTER}&cnt={settings.MAX_ROWS}&page=1"
+  print(f"Scraping data from {url}")
   res = requests.get(url)
   soup = BeautifulSoup(res.text, 'html.parser')
   try:
@@ -190,7 +201,7 @@ def force_refresh(db: Session, start_year: int):
   """
   try:
     clear_data(db)                      # Wipe data clean from the database
-    bootstrap_data(db, start_year)      # Bootstrapping the data       
+    bootstrap_data(db, start_year, False)      # Bootstrapping the data       
   except Exception as e:                # Handle exceptions that might occur during the refresh
     print(f"Failed to force refresh: {str(e)}")
     raise Exception(f"Failed to force refresh: {str(e)}")
@@ -205,22 +216,52 @@ def retrieve_by_ticker(db: Session, ticker_id:str):
     return None # not found then, return None
   return existing_ticker
 
-def retrieve_transactions(db: Session, ticker_id: str, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, skip: int = 0, limit: int = 100):
-  # If from_date is not provided, set it to today's date
+def retrieve_transactions(db: Session, ticker_id: str, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, trade_type = None, skip: int = 0, limit: int = 100):
+  # If from_date is not provided, set it to the default: earliest date 
   if not from_date:
-    from_date = datetime.today()
+    from_date = datetime.today() # todo: to change to the earliest date
 
   # If to_date is not provided, set it to today's date
   if not to_date:
     to_date = datetime.today()
 
-  return db.query(models.Transaction)\
-            .filter(models.Transaction.ticker == ticker_id)\
-            .filter(models.Transaction.trade_date >= from_date)\
-            .filter(models.Transaction.trade_date <= to_date)\
-            .order_by(models.Transaction.trade_date.desc())\
-            .offset(skip)\
-            .limit(limit)\
-            .all()
+  # If trade_type is not provided, set it to None
+  if trade_type == "":
+    trade_type = None
 
-
+  if ticker_id != "" and trade_type == None: # if ticker_id is provided and trade_type is not provided
+    return db.query(models.Transaction)\
+              .filter(models.Transaction.ticker == ticker_id)\
+              .filter(models.Transaction.trade_date >= from_date)\
+              .filter(models.Transaction.trade_date <= to_date)\
+              .order_by(models.Transaction.trade_date.desc())\
+              .offset(skip)\
+              .limit(limit)\
+              .all()
+  elif ticker_id != "" and trade_type != None: # if ticker_id and trade_type are provided
+    return db.query(models.Transaction)\
+              .filter(models.Transaction.ticker == ticker_id)\
+              .filter(models.Transaction.trade_date >= from_date)\
+              .filter(models.Transaction.trade_date <= to_date)\
+              .filter(models.Transaction.trade_type == trade_type)\
+              .order_by(models.Transaction.trade_date.desc())\
+              .offset(skip)\
+              .limit(limit)\
+              .all()
+  elif ticker_id == "" and trade_type == None: # trade dates are provided and trade_type is not provided
+    return db.query(models.Transaction)\
+              .filter(models.Transaction.trade_date >= from_date)\
+              .filter(models.Transaction.trade_date <= to_date)\
+              .order_by(models.Transaction.trade_date.desc())\
+              .offset(skip)\
+              .limit(limit)\
+              .all()
+  else: # trade dates and trade_type are provided
+    return db.query(models.Transaction)\
+              .filter(models.Transaction.trade_date >= from_date)\
+              .filter(models.Transaction.trade_date <= to_date)\
+              .filter(models.Transaction.trade_type == trade_type)\
+              .order_by(models.Transaction.trade_date.desc())\
+              .offset(skip)\
+              .limit(limit)\
+              .all()

@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env')) # take environment variables from .env.
 
+# ============================
+# Environment Constants
+# ============================
 BASEDIR_APP=os.path.abspath(os.path.dirname(__file__))
 DATABASE_PATH=os.environ.get("DATABASE_PATH")
 SECRET_KEY=os.environ.get("SECRET_KEY") 

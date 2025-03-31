@@ -4,18 +4,24 @@ from datetime import date, datetime
 from enum import Enum 
 import uuid
 
-class TransactionParams(BaseModel):
-   ticker: str 
-   from_date: Optional[date]
-   to_date: Optional[date]
-
-class DataParams(BaseModel):
-    start_year: int
-
 class TransactionType(Enum):
   S = "S - Sale"
   SOE = "S - Sale+OE"
   P = "P - Purchase"
+
+class TransactionParams(BaseModel):
+  ticker: str 
+  from_date: Optional[date] = None
+  to_date: Optional[date] = None
+  transaction_type: Optional[TransactionType] = None 
+
+class TransactionDateRange(BaseModel):
+  from_date: date
+  to_date: date
+  transaction_type: Optional[TransactionType] = None 
+
+class DataParams(BaseModel):
+    start_year: int
 
 class Transaction(BaseModel):
   id: str   

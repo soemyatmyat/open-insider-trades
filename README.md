@@ -5,18 +5,18 @@ This project provides API endpoints to retrieve insider transactions (SEC Form 4
 ### Functionalities
 
 #### API 
-Swagger documentation: [to-link] 
+Swagger/OpenAPI documentation: 
 Filter trades by
-- [ ] Ticker: 
-- [ ] Trade Type:  
-- [ ] Date Range:  
-- [X] Ticker and Date Range:
+- [X] Ticker (Date Range and Transaction type are optional) ==> /trades/ticker (Retrieve By Ticker)
+- [X] Date Range  (Transaction type is optional) ==> /trades (Retrieve By Date Range)
 
 #### Admin Feature (login required)
-- [X] Force refresh (Wipe the data clean if there is any, and proceed with the bootstrapping)
-- [ ] Daily Sync (enable/disable with the timer)
+- [X] Force refresh/ Bootstrapping (Wipe the data clean if there is any, and proceed with the bootstrapping)
+- [X] Daily Sync 
+- [ ] Enable/disable the daily sync (Celery with Redis?)
 - [ ] Dump the data into csv
 - [ ] Load the data from csv (Be careful as this action overwrites the existing data)
+- [ ] Authentication
 
 - **Bootstrapping** will run the webscrapping script on http://openinsider.com and save the data into the csv. The saved csv files are processed batch by batch into the database. By default, the earliest date for data extraction is set to '2003-01-01' (YYYY-MM-DD), but this can be a configurable parameter. 
 - **Daily sync** is enabled, by default, and therefore, the new data is fetched and processed everyday at midnight GMT/UTC epoch time. 
@@ -38,7 +38,7 @@ open-insider-trades/
 │   └── transaction.py    
 ├── services/                 # Fetch, preprocess and prepare the data       
 │   └── transaction.py         
-├── internal/                 # Internal/private routes for the admin module      
+├── internal/                 # Internal/private routes for the admin module    
 │   └── admin.py              
 ├── requirements.txt          # Libraries Dependencies
 ├── Dockerfile                # Docker configuration
@@ -50,4 +50,5 @@ open-insider-trades/
 ```
 
 ### References
-This project follows the best practice of (the Twelve-Factor App)[https://12factor.net/logs] amd treat logs as event streams. 
+This project follows the best practice of [the Twelve-Factor App](https://12factor.net) and treat logs as event streams. 
+This project follows the standard the [Style Guide for Python Code](https://peps.python.org/pep-0008/).

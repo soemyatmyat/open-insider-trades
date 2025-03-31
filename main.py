@@ -24,7 +24,7 @@ app.add_middleware(
 async def redirect_to_docs():
   return RedirectResponse(url="/docs")
 
-app.include_router(transact_router, prefix="/ticker")
+app.include_router(transact_router, prefix="/trades")
 app.include_router(admin_router, prefix="/admin")
 
 # Create all the tables (if it doesn't already exist) defined in the Base class'metadata within the connected database 
