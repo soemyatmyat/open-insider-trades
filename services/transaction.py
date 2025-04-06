@@ -60,6 +60,7 @@ def bootstrap_data(db: Session, start_year: int, daily_sync):
   """
   try: 
     if extract_data(start_year, daily_sync): # Extract data from the source
+      print("Importing data into the database...")
       import_data(db) # Import data into the database
     print("Bootstrap completed successfully!")
   except Exception as e:

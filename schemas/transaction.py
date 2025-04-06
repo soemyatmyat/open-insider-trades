@@ -2,7 +2,6 @@ from typing import Optional
 from pydantic import BaseModel
 from datetime import date, datetime
 from enum import Enum 
-import uuid
 
 class TransactionType(Enum):
   S = "S - Sale"

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from routers.transaction import router as transact_router
 from routers.admin import router as admin_router
+from routers.auth import router as auth_router
 from db import engine, Base 
 
 app = FastAPI()
@@ -26,6 +27,7 @@ async def redirect_to_docs():
 
 app.include_router(transact_router, prefix="/trades")
 app.include_router(admin_router, prefix="/admin")
+app.include_router(auth_router, prefix="/auth")
 
 # Create all the tables (if it doesn't already exist) defined in the Base class'metadata within the connected database 
 Base.metadata.create_all(bind=engine) 

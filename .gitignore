@@ -19,6 +19,7 @@ specifications
 #Ignore images
 *.png
 *.jpg
+*.csv 
 
 #Ignore these files
 schema.sql
