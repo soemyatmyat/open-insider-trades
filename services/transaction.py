@@ -7,8 +7,7 @@ import requests, csv
 import settings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, date
-from schemas import transaction as schemas # pydantic 
-from models import transaction as models # ORM 
+from models import transaction as model # ORM 
 
 COLUMN_HEADERS = ['X', 'Filling Date', 'Trade Date', 'Ticker', 'Company Name', 'Insider Name','Title', 'Trade Type', 'Price', 'Qty', 'Owned', 'Delta_owned', 'Value']
 
@@ -208,7 +207,7 @@ def force_refresh(db: Session, start_year: int):
     raise Exception(f"Failed to force refresh: {str(e)}")
 
 def get_ticker(db: Session, ticker_id: str):
-  return db.query(models.Transaction).filter(models.Transaction.ticker==ticker_id).first()
+  return db.query(model.Transaction).filter(model.Transaction.ticker==ticker_id).first()
 
 def retrieve_by_ticker(db: Session, ticker_id:str):
   # check if ticker exists in the database 
@@ -231,38 +230,38 @@ def retrieve_transactions(db: Session, ticker_id: str, from_date: Optional[datet
     trade_type = None
 
   if ticker_id != "" and trade_type == None: # if ticker_id is provided and trade_type is not provided
-    return db.query(models.Transaction)\
-              .filter(models.Transaction.ticker == ticker_id)\
-              .filter(models.Transaction.trade_date >= from_date)\
-              .filter(models.Transaction.trade_date <= to_date)\
-              .order_by(models.Transaction.trade_date.desc())\
+    return db.query(model.Transaction)\
+              .filter(model.Transaction.ticker == ticker_id)\
+              .filter(model.Transaction.trade_date >= from_date)\
+              .filter(model.Transaction.trade_date <= to_date)\
+              .order_by(model.Transaction.trade_date.desc())\
               .offset(skip)\
               .limit(limit)\
               .all()
   elif ticker_id != "" and trade_type != None: # if ticker_id and trade_type are provided
-    return db.query(models.Transaction)\
-              .filter(models.Transaction.ticker == ticker_id)\
-              .filter(models.Transaction.trade_date >= from_date)\
-              .filter(models.Transaction.trade_date <= to_date)\
-              .filter(models.Transaction.trade_type == trade_type)\
-              .order_by(models.Transaction.trade_date.desc())\
+    return db.query(model.Transaction)\
+              .filter(model.Transaction.ticker == ticker_id)\
+              .filter(model.Transaction.trade_date >= from_date)\
+              .filter(model.Transaction.trade_date <= to_date)\
+              .filter(model.Transaction.trade_type == trade_type)\
+              .order_by(model.Transaction.trade_date.desc())\
               .offset(skip)\
               .limit(limit)\
               .all()
   elif ticker_id == "" and trade_type == None: # trade dates are provided and trade_type is not provided
-    return db.query(models.Transaction)\
-              .filter(models.Transaction.trade_date >= from_date)\
-              .filter(models.Transaction.trade_date <= to_date)\
-              .order_by(models.Transaction.trade_date.desc())\
+    return db.query(model.Transaction)\
+              .filter(model.Transaction.trade_date >= from_date)\
+              .filter(model.Transaction.trade_date <= to_date)\
+              .order_by(model.Transaction.trade_date.desc())\
               .offset(skip)\
               .limit(limit)\
               .all()
   else: # trade dates and trade_type are provided
-    return db.query(models.Transaction)\
-              .filter(models.Transaction.trade_date >= from_date)\
-              .filter(models.Transaction.trade_date <= to_date)\
-              .filter(models.Transaction.trade_type == trade_type)\
-              .order_by(models.Transaction.trade_date.desc())\
+    return db.query(model.Transaction)\
+              .filter(model.Transaction.trade_date >= from_date)\
+              .filter(model.Transaction.trade_date <= to_date)\
+              .filter(model.Transaction.trade_type == trade_type)\
+              .order_by(model.Transaction.trade_date.desc())\
               .offset(skip)\
               .limit(limit)\
               .all()

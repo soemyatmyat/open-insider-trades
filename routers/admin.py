@@ -1,17 +1,18 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Security
 from schemas import transaction as schema
-from schemas import auth as auth_schema
+from schemas import auth as authSchema
 from services import transaction as transactMgr
 from services import auth as authMgr
 from sqlalchemy.orm import Session 
 from db import get_db
 from datetime import datetime
 import routers.utils.exceptions as exceptions
+from routers.auth import get_current_client
 
 router = APIRouter()
 
-@router.get("/generate_client_id", response_model=auth_schema.ClientCreate, tags=["Admin"])# admin api endpoint
-async def generate_client_id(db: Session = Depends(get_db)):
+@router.get("/generate_client_id", response_model=authSchema.ClientCreate, tags=["Admin"])# admin api endpoint
+async def generate_client_id(current_user: authSchema.Client = Security(get_current_client, scopes=["admin"]),db: Session = Depends(get_db)):
   try:
     client_id = authMgr.generate_client_id(db)
     return client_id
@@ -20,7 +21,7 @@ async def generate_client_id(db: Session = Depends(get_db)):
     raise exceptions.internal_server_exception(detail="A generic error occurred on the server.")
 
 @router.get("/bootstrap", tags=["Admin"]) # admin api endpoint
-async def bootstrap(data_params: schema.DataParams = Depends(), db: Session = Depends(get_db)):
+async def bootstrap(current_user: authSchema.Client = Security(get_current_client, scopes=["admin"]),data_params: schema.DataParams = Depends(), db: Session = Depends(get_db)):
   try:
     start_year = data_params.start_year  # Extract the start_year from the validated Pydantic model
     transactMgr.force_refresh(db, data_params.start_year) # Call the force_refresh function

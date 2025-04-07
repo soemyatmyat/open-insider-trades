@@ -2,13 +2,14 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session 
 from passlib.context import CryptContext
 import services.utils.token as jwtoken
-import uuid
-import secrets
+import uuid, secrets
 from models import client as model
 from schemas import auth as schema
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") # password-hash before storing
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token") # redriect to this endpoint to get the token
+oauth2_scheme = OAuth2PasswordBearer(
+  tokenUrl="/auth/token", # the token endpoint
+)
 
 def generate_client_id(db: Session) -> schema.ClientCreate:
   client_id = str(uuid.uuid4())
@@ -19,7 +20,12 @@ def generate_client_id(db: Session) -> schema.ClientCreate:
   db.commit()
   db.refresh(db_client)
   if db_client:
-    return schema.ClientCreate(client_id=db_client.id, client_secret=client_secret, is_active=db_client.is_active)
+    return schema.ClientCreate(
+      client_id=db_client.id, 
+      client_secret=client_secret, 
+      is_active=db_client.is_active, 
+      role=db_client.role
+    )
   return None
 
 def generate_client_secret():
@@ -32,10 +38,10 @@ def generate_client_secret():
 def get_client(db: Session, client_id: int):
   return db.query(model.Client).filter(model.Client.id == client_id).first()
 
-def get_client_by_id(db: Session, client_id: str) -> schema.ClientId:
+def get_client_by_id(db: Session, client_id: str) -> schema.Client:
   client = db.query(model.Client).filter(model.Client.id == client_id).first()
   if client:
-    return schema.ClientId(client_id=client.id, is_active=client.is_active)
+    return schema.Client(client_id=client.id, is_active=client.is_active, role=client.role)
   return None
 
 def authenticate_client(db: Session, username: str, password: str):
@@ -45,13 +51,13 @@ def authenticate_client(db: Session, username: str, password: str):
   db_client = get_client(db, client.client_id)
   if not client.is_active and not pwd_context.verify(password, db_client.hashed_secret):
     return False
-  return client # return the client with id and status
+  return client # return the client with id, status and role
   
-def create_access_token(data: dict, expires_delta: int = None):
-  return jwtoken.create_access_token(data, expires_delta)
+def create_access_token(data: dict, scopes: list[str], expires_delta: int = None):
+  return jwtoken.create_access_token(data, scopes, expires_delta)
 
 def decode_access_token(token: str):
   return jwtoken.decode_access_token(token)
 
-def revoke_access_token(token: str):
+def revoke_access_token(token: str):  
   jwtoken.revoke_token(token)

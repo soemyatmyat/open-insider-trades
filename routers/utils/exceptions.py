@@ -1,10 +1,17 @@
 from fastapi import HTTPException, status
 
-def auth_exception(detail="Could not validate credentials"):
+def bad_request_exception(detail="Malformed request"):
+  return HTTPException(
+      status_code=status.HTTP_400_BAD_REQUEST,
+      detail=detail,
+      headers={"WWW-Authenticate": "Bearer"},
+  )
+
+def auth_exception(detail="Could not validate credentials",headers=None):
   return HTTPException(
       status_code=status.HTTP_401_UNAUTHORIZED,
       detail=detail,
-      headers={"WWW-Authenticate": "Bearer"},
+      headers={headers} if headers else {"WWW-Authenticate": "Bearer"},
   )
 
 def forbidden_exception(detail="You do not have permission to access this resource"):

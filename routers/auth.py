@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
-from fastapi.security import OAuth2PasswordRequestForm
-from schemas import auth as schema
+from fastapi.security import OAuth2PasswordRequestForm, SecurityScopes
+from schemas import auth as authSchema
 from services import auth as authMgr
 from typing import Annotated
 from routers.utils import exceptions
@@ -10,33 +10,44 @@ from db import get_db
 
 router = APIRouter()
 
-@router.post("/token", response_model=schema.Token, tags=["auth"], include_in_schema=False) # return bearer token
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session=Depends(get_db)) -> schema.Token:
+@router.post("/token", response_model=authSchema.Token, tags=["auth"], include_in_schema=False) # return bearer token
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session=Depends(get_db)) -> authSchema.Token:
+    '''
+    this function will be called for authentication, when the user login with username and password
+    the username and password will be passed to the form_data
+    the form_data will be validated by FastAPI
+    if the username and password are correct, return the access token
+    if the username and password are incorrect, raise an exception
+    '''
     user = authMgr.authenticate_client(db, form_data.username, form_data.password)
     if not user:
         raise exceptions.auth_exception("Incorrect username or password")
-    access_token = authMgr.create_access_token(data={"sub": user.client_id}) # create access token with sub as client_id
-    return schema.Token(access_token=access_token, token_type="bearer") # return access token and token type
+    scopes = ["read", "write", "admin"] if user.role == "super_admin" else ["read"]
+    access_token = authMgr.create_access_token(data={"sub": user.client_id},scopes=scopes) # create access token with sub as client_id and scopes
+    return authSchema.Token(access_token=access_token, token_type="bearer") # return access token and token type
 
 @router.post("/logout", include_in_schema=True) 
 async def logout(token: str = Depends(authMgr.oauth2_scheme)):
-    # revoke the token access (it will expire by default in 15 mins anyway)
-    token_data=authMgr.decode_access_token(token)
-    if token_data is None:
-        raise exceptions.auth_exception
+    # revoke the token access (it will expire by default in 30 mins anyway)
     authMgr.revoke_access_token(token)
 
-'''
-this function will be called for authorization, similar to @app.get("/protected")
-but this is faciliated with FastAPI: Depends(get_current_user)
-oath2_scheme is used to get the Bearer token from the request header
-if the token is invalid, missing or the user is not found, throw an exception
-'''
-async def get_current_client(token: Annotated[str, Depends(authMgr.oauth2_scheme)], db: Session = Depends(get_db)):
+async def get_current_client(security_scopes: SecurityScopes, token: Annotated[str, Depends(authMgr.oauth2_scheme)], db: Session = Depends(get_db)):
+    '''
+    this function will be called for authorization, similar to @app.get("/protected")
+    but this is faciliated with FastAPI: Depends(get_current_client)
+    oath2_scheme is used to get the Bearer token from the request header
+    if the token is invalid, missing or the user is not found, throw an exception
+    '''
     token_data = authMgr.decode_access_token(token) # get the token data
     if token_data is None:
-        raise exceptions.auth_exception
-    client = authMgr.get_client_by_id(db, client_id=token_data.username) # {"username": client_id}
+        raise exceptions.auth_exception("Could not validate credentials", headers={"WWW-Authenticate": f'Bearer scope="{security_scopes.scope_str}"'})
+    
+    for scope in security_scopes.scopes:
+        if scope not in token_data.scopes:
+            raise exceptions.forbidden_exception("Not enough permissions", headers={"WWW-Authenticate": f'Bearer scope="{security_scopes.scope_str}"'})
+
+    # get the client_id from the token sub data if authorization is successful
+    client = authMgr.get_client_by_id(db, client_id=token_data.sub) # {"sub": client_id}
     if client is None:
         raise exceptions.auth_exception
-    return client # client_id, is_active
+    return client # client_id, is_active, role

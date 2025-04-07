@@ -1,34 +1,65 @@
+# Open Insider Trades API
 
-### Description
-This project provides the API endpoints to retrieve insider transactions (SEC Form 4 Insider Trading activities) based on the ticker, trade type, and date range. I decided to quickly build this to integrate with my own hobby project as I could not find any other easily accessible sources for insider trades. The data is scraped (using BeautifulSoup) from the openinsider.com website for SEC Form 4 Insider Trading Transactions. I may add more features in the future. This project is built with FastAPI framework, BeautifulSoup, and SQLAchemy with SQLite3.
+## Description
+This project provides API endpoints to retrieve insider trading transactions (SEC Form 4 Insider Trading activities) based on the stock ticker, trade type, and date range. The data is scraped from [openinsider.com](http://openinsider.com) using BeautifulSoup and is stored in an SQLite database using SQLAlchemy. This project was created as a personal hobby project to integrate with my own tools, as I couldn’t find a suitable source for insider trades. Additional features may be added in the future.
 
-### Functionalities
+**Technologies Used:**
+- FastAPI
+- BeautifulSoup
+- SQLAlchemy
+- SQLite3
 
-#### Basic
-- [X] JWT Authentication
-- [ ] Implement Rate limit 
-- [X] Encapsulate http exceptions 
+## Features
 
-#### API Endpoints
-Swagger/OpenAPI documentation: {{base-url}}/docs#/
-- [X] Retrieve trades by the ticker (Date Range and Transaction type are optional): {{base-url}}/trades/ticker (Retrieve By Ticker)
-- [X] Retrieve trades by the date range  (Transaction type is optional): {{base-url}}/trades (Retrieve By Date Range)
+### Basic Features
+- [X] **JWT Authentication** – Secure API access using JWT tokens.
+- [ ] **Rate Limiting** – Implemented to prevent overloading the API (to be added).
+- [X] **HTTP Exception Handling** – Custom error handling for API responses.
 
-#### Admin Feature (login required)
-- [X] Force refresh/ Bootstrapping
-- [X] Daily Sync 
-- [ ] Enable/disable the daily sync (Celery with Redis - is it an overkill?)
-- [ ] Dump the data into the csv
-- [ ] Bulk update 
-  - [ ] Load the data from the csv 
-    - [ ] Validate the csv file 
-    - [ ] Thrown errors with an all or nothing approach (rollback when there are any errors)
+### API Endpoints
+Swagger/OpenAPI documentation: `{{base-url}}/docs#/`
 
-- **Bootstrapping** will run the webscrapping script on http://openinsider.com and save the data into the csv. The saved csv files are processed batch by batch into the database. By default, the earliest date for data extraction is set to '2003-01-01' (YYYY-MM-DD), but this can be a configurable parameter. 
-- **Daily sync** is enabled, by default, and therefore, the new data is fetched and processed everyday at midnight GMT/UTC epoch time. 
+- [X] **Retrieve Trades by Ticker**: `{{base-url}}/trades/ticker`  
+  Allows you to retrieve insider trades by stock ticker. **Date range** and **transaction type** are optional parameters.
 
-### How to run locally
-<placeholder>
+- [X] **Retrieve Trades by Date Range**: `{{base-url}}/trades`  
+  Retrieve insider trades by a specified date range. **Transaction type** is optional.
+
+### Admin Features (Login Required)
+- [X] **Force Refresh / Bootstrapping** – Runs a web scraping script to refresh the data.
+- [X] **Daily Sync** – Automatically fetches and processes new data daily.
+- [ ] **Enable/Disable Daily Sync** – Enable or disable the daily sync (using Celery with Redis - is this an overkill?).
+- [ ] **Dump Data to CSV** – Export the data into a CSV format.
+- [ ] **Bulk Update** –  
+  - [ ] Load data from a CSV file.
+  - [ ] Validate CSV file contents.
+  - [ ] Use an "all or nothing" approach for error handling (rollback if errors occur).
+
+**Bootstrapping** will trigger the web scraping script on [openinsider.com](http://openinsider.com) and save the data into CSV files. These files are then processed and imported into the database in batches. By default, the earliest data extraction date is set to **2003-01-01** (YYYY-MM-DD), but this can be configured.
+
+**Daily Sync** is enabled by default, meaning new data is fetched and processed every day at midnight GMT/UTC.
+
+## How to Run Locally
+
+1. Clone the repository:
+  ```bash
+  git clone <repo-url>
+  cd open-insider-trades
+  ```
+2. Install the dependencies:
+  ```bash
+  pip install -r requirements.txt
+  ```
+3. Set up environment variables in a `.env` file (example):
+  ```
+  SQLALCHEMY_DATABASE_URL=sqlite:///./test.db
+  ```
+4. Run the application:
+  ```bash
+  uvicorn main:app --reload
+  ```
+
+The API will be available at `http://127.0.0.1:8000`.
 
 ### File Structure
 ```
@@ -62,7 +93,7 @@ open-insider-trades/
 └── README.md                 # Documentation
 ```
 
-### References
-This project follows 
-1. the best practice of [the Twelve-Factor App](https://12factor.net) and treat logs as event streams. 
-2. This project follows the standard [Style Guide for Python Code](https://peps.python.org/pep-0008/).
+## References
+This project follows:
+1. The best practices outlined by the [Twelve-Factor App](https://12factor.net), treating logs as event streams.
+2. The [Style Guide for Python Code](https://peps.python.org/pep-0008/) to ensure clean, readable, and consistent code.
