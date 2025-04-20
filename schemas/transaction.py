@@ -38,6 +38,6 @@ class Transaction(BaseModel):
   delta_owned: Optional[str]
   value: Optional[float]
 
-  class Config:
-    orm_mode = True  # Important to tell Pydantic to convert ORM objects to Pydantic models
+class Config:
+  from_attribute = True  # Important to tell Pydantic to convert ORM objects to Pydantic models
 

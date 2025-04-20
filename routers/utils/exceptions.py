@@ -11,7 +11,7 @@ def auth_exception(detail="Could not validate credentials",headers=None):
   return HTTPException(
       status_code=status.HTTP_401_UNAUTHORIZED,
       detail=detail,
-      headers={headers} if headers else {"WWW-Authenticate": "Bearer"},
+      headers=headers if headers else {"WWW-Authenticate": "Bearer"},
   )
 
 def forbidden_exception(detail="You do not have permission to access this resource"):

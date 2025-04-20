@@ -43,7 +43,7 @@ def clear_data(db: Session):
     Raises: Exception for any issues
     """
     try:
-        db.query(models.Transaction).delete()  # Delete all records
+        db.query(model.Transaction).delete()  # Delete all records
         db.commit()  # Commit the changes
         print("All transaction records have been deleted.")
     except Exception as e:
@@ -165,7 +165,7 @@ def import_data(db: Session):
       reader = csv.DictReader(file)  # Reads CSV with column names
       transactions = []
       for row in reader:
-          transactions.append(models.Transaction(
+          transactions.append(model.Transaction(
               x=row["X"],
               filing_date=(parse_timestamp(row["Filling Date"])),
               trade_date=(parse_date(row["Trade Date"])),
@@ -226,8 +226,10 @@ def retrieve_transactions(db: Session, ticker_id: str, from_date: Optional[datet
     to_date = datetime.today()
 
   # If trade_type is not provided, set it to None
-  if trade_type == "":
+  if not trade_type:
     trade_type = None
+  else:
+    trade_type = trade_type.value
 
   if ticker_id != "" and trade_type == None: # if ticker_id is provided and trade_type is not provided
     return db.query(model.Transaction)\

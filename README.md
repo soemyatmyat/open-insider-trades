@@ -13,7 +13,7 @@ This project provides API endpoints to retrieve insider trading transactions (SE
 
 ### Basic Features
 - [X] **JWT Authentication** – Secure API access using JWT tokens.
-- [ ] **Rate Limiting** – Implemented to prevent overloading the API (to be added).
+- [X] **Rate Limiting per user/client** – Implemented to prevent overloading the API, with sliding window mechanism. 
 - [X] **HTTP Exception Handling** – Custom error handling for API responses.
 
 ### API Endpoints
@@ -30,10 +30,10 @@ Swagger/OpenAPI documentation: `{{base-url}}/docs#/`
 - [X] **Daily Sync** – Automatically fetches and processes new data daily.
 - [ ] **Enable/Disable Daily Sync** – Enable or disable the daily sync (using Celery with Redis - is this an overkill?).
 - [ ] **Dump Data to CSV** – Export the data into a CSV format.
-- [ ] **Bulk Update** –  
-  - [ ] Load data from a CSV file.
+- [ ] **Bulk Upload** – File size limit: ~5 MB 
   - [ ] Validate CSV file contents.
-  - [ ] Use an "all or nothing" approach for error handling (rollback if errors occur).
+  - [ ] Load data from a CSV file.
+  - [ ] Use an "all or nothing" approach for error handling (rollback if an error occur).
 
 **Bootstrapping** will trigger the web scraping script on [openinsider.com](http://openinsider.com) and save the data into CSV files. These files are then processed and imported into the database in batches. By default, the earliest data extraction date is set to **2003-01-01** (YYYY-MM-DD), but this can be configured.
 
@@ -53,6 +53,11 @@ Swagger/OpenAPI documentation: `{{base-url}}/docs#/`
 3. Set up environment variables in a `.env` file (example):
   ```
   SQLALCHEMY_DATABASE_URL=sqlite:///./test.db
+  BASE_URL = "http://openinsider.com/screener"
+  SECRET_KEY = ""  # this would be used for authentication of JWT token
+  ALGORITHM = "" # this would be used for JWT (header.payload.signature) generation
+  ACCESS_TOKEN_EXPIRE_MINUTES = 30
+  MAX_WORKERS = 3  # Number of threads for data extraction
   ```
 4. Run the application:
   ```bash
@@ -80,7 +85,8 @@ open-insider-trades/
 │   └── auth.py         
 │   └── transaction.py       
 ├── services/                 # 4/ Fetch, preprocess and prepare the data       
-│   └── transaction.py      
+│   └── transaction.py   
+│   └── ratelimiter.py     
 │   └── auth.py       
 │   └── utils 
 │     └── token.py 
@@ -97,3 +103,4 @@ open-insider-trades/
 This project follows:
 1. The best practices outlined by the [Twelve-Factor App](https://12factor.net), treating logs as event streams.
 2. The [Style Guide for Python Code](https://peps.python.org/pep-0008/) to ensure clean, readable, and consistent code.
+3. The data validation library for Python: [Pydantic](https://docs.pydantic.dev/latest/)

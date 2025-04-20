@@ -12,7 +12,7 @@ def create_access_token(data: dict, scopes: list[str], expires_delta: timedelta 
         expire = datetime.now(timezone.utc) + expires_delta
     else: # default 30 mins (in settings)
         expire = datetime.now(timezone.utc) + timedelta(minutes=float(settings.ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"scopes": scopes,"exp":expire}) # to_encode={"sub": client_id, "exp": expire}
+    to_encode.update({"scopes": scopes,"exp":expire}) # to_encode={"sub": client_id, "scope": read, "exp": expire}
     # encode jwt with secrect key and algorithm, and return it 
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
