@@ -1,0 +1,70 @@
+import redis
+from services import redis_client 
+from fastapi import APIRouter, Depends, Security
+from schemas import transaction as tranact_schema
+from schemas import auth as authSchema
+from services import transaction as transact_mgr
+from services import rate_limiter as rate_limiter
+from sqlalchemy.orm import Session 
+from db import get_db
+from routers.auth import get_current_client
+from routers.utils import exceptions
+
+router = APIRouter()
+
+@router.get("/ticker", response_model=list[tranact_schema.Transaction]) 
+async def retrieve_by_ticker(
+  params: tranact_schema.TransactionParams = Depends(), 
+  current_user: authSchema.Client = Security(get_current_client, scopes=["read"]), 
+  db: Session=Depends(get_db),
+  redis_client: redis.Redis = Depends(redis_client.get_redis_client)
+  ):
+
+  # rate limit validation
+  try:
+    rate_limiter.validate_rate_limit(current_user, db, redis_client)
+  except rate_limiter.RateLimitExceededException:
+    raise exceptions.too_many_requests_exception("Rate limit exceeded. Please try again later.")
+
+  # from_date and to_date check
+  if params.from_date and params.to_date and params.from_date  > params.to_date : 
+    raise exceptions.bad_request_exception("from_date cannot be after to_date.")
+
+  # the ticker input validation
+  existing_ticker = transact_mgr.retrieve_by_ticker(db, params.ticker)
+  if not existing_ticker:
+    raise exceptions.not_found_exception("No data found, symbol may be delisted.")
+  
+  transactions = transact_mgr.retrieve_transactions(
+    db, 
+    params.ticker,
+    params.from_date,
+    params.to_date,
+    params.transaction_type
+  )
+  return transactions or []
+
+@router.get("", response_model=list[tranact_schema.Transaction]) 
+async def retrieve_by_date_range(
+  params: tranact_schema.TransactionDateRange = Depends(), 
+  current_user: authSchema.Client = Security(get_current_client, scopes=["read"]), 
+  db: Session=Depends(get_db)):
+
+  # rate limit validation
+  try:
+    rate_limiter.validate_rate_limit(current_user, db)
+  except rate_limiter.RateLimitExceededException:
+    raise exceptions.too_many_requests_exception("Rate limit exceeded. Please try again later.")
+  
+  # from_date and to_date check
+  if params.from_date and params.to_date and params.from_date  > params.to_date : 
+    raise exceptions.bad_request_exception("from_date cannot be after to_date.")
+
+  transactions = transact_mgr.retrieve_transactions(
+    db, 
+    "",
+    params.from_date,
+    params.to_date,
+    params.transaction_type.value
+  )
+  return transactions or []

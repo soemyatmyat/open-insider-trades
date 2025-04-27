@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  open-insider-trades:
+    build:
+      context: ./server
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis # Ensure Redis is started before the application
+  redis:
+    container_name: redis
+    image: "redis:alpine"
+    env_file:
+      - .env  # Remember to create .env file in the current working directory. The .env file should contains the key-value pairs for REDIS_PASSWORD
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    ports:
+      - 6379:6379
+    volumes:
+      - ./redis-data:/data       # mounts a local currnt working directory (./redis-data) for persistent storage
+    command:
+      - "--save 100 10"       # Save a snapshot of the DB every 100 seconds if a least 10 write operation was performed
+      - "--requirepass ${REDIS_PASSWORD}"       # Set password
+      - "--loglevel warning"
+
+volumes:
+  redis-data:
