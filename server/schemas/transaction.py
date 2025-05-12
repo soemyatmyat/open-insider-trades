@@ -9,7 +9,6 @@ class TransactionType(Enum):
   P = "P - Purchase"
 
 class TransactionParams(BaseModel):
-  ticker: str 
   from_date: Optional[date] = None
   to_date: Optional[date] = None
   transaction_type: Optional[TransactionType] = None 

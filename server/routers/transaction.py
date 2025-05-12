@@ -12,8 +12,8 @@ from routers.utils import exceptions
 
 router = APIRouter()
 
-@router.get("/ticker", response_model=list[tranact_schema.Transaction]) 
-async def retrieve_by_ticker(
+@router.get("/{ticker_id}", response_model=list[tranact_schema.Transaction]) 
+async def retrieve_by_ticker(ticker_id: str,
   params: tranact_schema.TransactionParams = Depends(), 
   current_user: authSchema.Client = Security(get_current_client, scopes=["read"]), 
   db: Session=Depends(get_db),
@@ -31,13 +31,14 @@ async def retrieve_by_ticker(
     raise exceptions.bad_request_exception("from_date cannot be after to_date.")
 
   # the ticker input validation
-  existing_ticker = transact_mgr.retrieve_by_ticker(db, params.ticker)
+  ticker_id = ticker_id.upper()
+  existing_ticker = transact_mgr.retrieve_by_ticker(db, ticker_id)
   if not existing_ticker:
     raise exceptions.not_found_exception("No data found, symbol may be delisted.")
   
   transactions = transact_mgr.retrieve_transactions(
     db, 
-    params.ticker,
+    ticker_id,
     params.from_date,
     params.to_date,
     params.transaction_type

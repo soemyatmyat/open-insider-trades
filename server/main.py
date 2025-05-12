@@ -26,7 +26,7 @@ app.add_middleware(
 async def redirect_to_docs():
   return RedirectResponse(url="/docs")
 
-app.include_router(transact_router, prefix="/trades")
+app.include_router(transact_router, prefix="/insider_trades")
 app.include_router(admin_router, prefix="/admin")
 app.include_router(auth_router, prefix="/auth")
 

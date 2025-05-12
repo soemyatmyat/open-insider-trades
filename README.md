@@ -22,11 +22,10 @@ This project provides API endpoints to retrieve insider trading transactions (SE
 ### API Endpoints (Login Required)
 - Swagger/OpenAPI documentation: `{{base-url}}/docs#/`
 - Redoc: `{{base-url}}/redoc`
-
-- [X] **Retrieve Trades by Ticker**: `{{base-url}}/trades/ticker`  
+- [X] **Retrieve Trades by Ticker**: `{{base-url}}/insider_trades/{{ticker_id}}`  
   Allows you to retrieve insider trades by stock ticker. **Date range** and **transaction type** are optional parameters.
 
-- [X] **Retrieve Trades by Date Range**: `{{base-url}}/trades`  
+- [X] **Retrieve Trades by Date Range**: `{{base-url}}/insider_trades`  
   Retrieve insider trades by a specified date range. **Transaction type** is optional.
 
 ### Admin Features (Login Required)
@@ -96,31 +95,31 @@ The API will be available at `http://127.0.0.1:8000`.
 ```
 open-insider-trades/
 ├── server      
-  ├── main.py                    # FastAPI app entry point 
-  ├── settings.py                # App settings & environment config
-  ├── db.py                      # Database connection setup
-  ├── models/                    # 1/ Database models      
-  │   ├── client.py    
-  │   └── transaction.py        
-  ├── routers/                   # 2/ API route handlers       
-  │   ├── admin.py  
-  │   ├── auth.py 
-  │   ├── transaction.py    
-  │   └── utils 
-  │       └── exceptions.py      # Custom error responses
-  ├── schemas/                   # 3/ Request & Response schemas for Pydantic and OpenAPI  
-  │   ├── auth.py         
-  │   └── transaction.py       
-  ├── services/                  # 4/ Fetch, preprocess and prepare the data       
-  │   ├── transaction.py   
-  │   ├── ratelimiter.py     
-  │   ├── auth.py       
-  │   └── utils 
-  │       └── token.py 
-  ├── requirements.txt           # Libraries Dependencies
-  ├── Dockerfile                 # Docker configuration
-  ├── .env                       # Environment variables
-  ├── .dockerignore              # Files ignored during Docker build
+│  ├── main.py                    # FastAPI app entry point 
+│  ├── settings.py                # App settings & environment config
+│  ├── db.py                      # Database connection setup
+│  ├── models/                    # 1/ Database models      
+│  │   ├── client.py    
+│  │   └── transaction.py        
+│  ├── routers/                   # 2/ API route handlers       
+│  │   ├── admin.py  
+│  │   ├── auth.py 
+│  │   ├── transaction.py    
+│  │   └── utils 
+│  │       └── exceptions.py     # Custom error responses
+│  ├── schemas/                  # 3/ Request & Response schemas for Pydantic and OpenAPI  
+│  │   ├── auth.py         
+│  │   └── transaction.py       
+│  ├── services/                 # 4/ Fetch, preprocess and prepare the data       
+│  │   ├── transaction.py   
+│  │   ├── ratelimiter.py     
+│  │   ├── auth.py       
+│  │   └── utils 
+│  │       └── token.py 
+│  ├── requirements.txt          # Libraries Dependencies
+│  ├── Dockerfile                # Docker configuration
+│  ├── .env                      # Environment variables
+│  └── .dockerignore             # Files ignored during Docker build
 ├── .gitignore                   # Git ignored files
 ├── build.sh                     # Shell script to run the app locally
 ├── .env                         # Redis environment variables
