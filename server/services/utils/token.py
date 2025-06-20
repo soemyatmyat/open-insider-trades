@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone 
 from jose import JWTError, jwt
 from schemas import auth as authSchema
+import secrets
 import settings
 
 BLACKLIST = set()
@@ -16,6 +17,9 @@ def create_access_token(data: dict, scopes: list[str], expires_delta: timedelta 
     # encode jwt with secrect key and algorithm, and return it 
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
+
+def create_refresh_token():
+    return secrets.token_urlsafe(32)  # Generate a random string as refresh token
 
 def revoke_token(token: str):
     BLACKLIST.add(token)

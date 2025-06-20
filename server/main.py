@@ -15,7 +15,7 @@ origins = ["*"] # this need to be changed later, to only allow whitelisted IPs
 app.add_middleware(
   CORSMiddleware,
   allow_origins=origins, 
-  allow_credentials=True, # Credentials (Authorization headers, Cookies, etc).
+  allow_credentials=True, # Allow Credentials (Authorization headers, Cookies, etc) to be included in the requests
   allow_methods=["GET","POST","PUT","DELETE","OPTIONS"], # Specify the allowed HTTP methods
   allow_headers=["*"], # Specify the allowed headers 
 )

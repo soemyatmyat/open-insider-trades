@@ -200,9 +200,9 @@ def force_refresh(db: Session, start_year: int):
   Raises: Exception If the system fails during the refresh process.
   """
   try:
-    clear_data(db)                      # Wipe data clean from the database
-    bootstrap_data(db, start_year, False)      # Bootstrapping the data       
-  except Exception as e:                # Handle exceptions that might occur during the refresh
+    clear_data(db)                              # Wipe data clean from the database
+    bootstrap_data(db, start_year, False)       # Bootstrapping the data       
+  except Exception as e:                        # Handle exceptions that might occur during the refresh
     print(f"Failed to force refresh: {str(e)}")
     raise Exception(f"Failed to force refresh: {str(e)}")
 

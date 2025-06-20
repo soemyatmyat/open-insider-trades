@@ -52,7 +52,7 @@ def authenticate_client(db: Session, username: str, password: str):
   if not client.is_active and not pwd_context.verify(password, db_client.hashed_secret):
     return False
   return client # return the client with id, status and role
-  
+ 
 def create_access_token(data: dict, scopes: list[str], expires_delta: int = None):
   return jwtoken.create_access_token(data, scopes, expires_delta)
 
@@ -61,3 +61,6 @@ def decode_access_token(token: str):
 
 def revoke_access_token(token: str):  
   jwtoken.revoke_token(token)
+
+def create_refresh_token():
+  return jwtoken.create_refresh_token()
