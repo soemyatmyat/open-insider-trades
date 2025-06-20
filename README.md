@@ -14,6 +14,7 @@ This project provides API endpoints to retrieve insider trading transactions (SE
 
 ### Basic Features
 - [X] **JWT Authentication**: Secure API access using JWT tokens.
+  - [X] Return Refresh token in httpOnly Cookie
 - [X] **Rate Limiting per user/client**: Implemented to prevent overloading the API, with **sliding window mechanism**. 
   - [X] Redis as primary for rate limiting.
   - [X] SQLite as fallback if Redis is unavailable.
@@ -83,6 +84,7 @@ This project provides API endpoints to retrieve insider trading transactions (SE
   REDIS_PASSWORD="<redis-pass>" # If Redis requires authentication, put the password here
   REDIS_PORT=6379
   REDIS_EX=600 # Optional: Set the expiration time (in seconds) for Redis keys
+  COOKIE_SECURE=False  # Set to True if using HTTPS
   ```
 4. Run the application:
   ```bash
