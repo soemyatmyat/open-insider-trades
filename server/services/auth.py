@@ -62,5 +62,5 @@ def decode_access_token(token: str):
 def revoke_access_token(token: str):  
   jwtoken.revoke_token(token)
 
-def create_refresh_token():
-  return jwtoken.create_refresh_token()
+def create_token():
+  return jwtoken.create_token()

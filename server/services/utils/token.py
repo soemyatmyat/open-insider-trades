@@ -18,7 +18,9 @@ def create_access_token(data: dict, scopes: list[str], expires_delta: timedelta 
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-def create_refresh_token():
+
+def create_token():
+    ''' Return a random URL-safe text string, in Base64 encoding'''
     return secrets.token_urlsafe(32)  # Generate a random string as refresh token
 
 def revoke_token(token: str):
