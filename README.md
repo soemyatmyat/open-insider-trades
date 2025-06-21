@@ -9,46 +9,76 @@ This project provides API endpoints to retrieve insider trading transactions (SE
 - SQLAlchemy – for ORM-based database interactions.
 - SQLite3 – as the primary database.
 - Redis – for rate limiting and caching. 
+- [JWT Authentication](https://datatracker.ietf.org/doc/html/rfc7519) with refresh_token
 
 ## Features
 
 ### Basic Features
-- [X] **JWT Authentication**: Secure API access using JWT tokens.
-  - [X] Return Refresh token in httpOnly Cookie
-- [X] **Rate Limiting per user/client**: Implemented to prevent overloading the API, with **sliding window mechanism**. 
-  - [X] Redis as primary for rate limiting.
-  - [X] SQLite as fallback if Redis is unavailable.
-- [X] **HTTP Exception Handling**: Custom error handling for API responses.
+| Feature                         | Status | Notes                                                                 |
+|---------------------------------|--------|-----------------------------------------------------------------------|
+| **JWT Authentication**          | ✅     | Access token in `Authorization` header; refresh token in cookie      |
+| **Refresh Token in Cookie**     | ✅     | Stored in `HttpOnly` cookie to prevent JavaScript access             |
+| **CSRF Protection**             | ✅     | CSRF token in cookie + `X-CSRF-Token` header                |
+| **Rate Limiting (per client)**  | ✅     | Sliding window; Redis-backed with SQLite fallback                    |
+| **Custom Error Handling**       | ✅     | Clean JSON error responses with consistent structure                 |
 
-### API Endpoints (Login Required)
-- Swagger/OpenAPI documentation: `{{base-url}}/docs#/`
+---
+
+### User Endpoints (Login Required)
+
+ **Docs**  
+- Swagger / OpenAPI: `{{base-url}}/docs#/`
 - Redoc: `{{base-url}}/redoc`
-- [X] **Retrieve Trades by Ticker**: `{{base-url}}/insider_trades/{{ticker_id}}`  
-  Allows you to retrieve insider trades by stock ticker. **Date range** and **transaction type** are optional parameters.
 
-- [X] **Retrieve Trades by Date Range**: `{{base-url}}/insider_trades`  
-  Retrieve insider trades by a specified date range. **Transaction type** is optional.
+| Feature                                              | Status | Endpoint / Notes                                                                 |
+|-------------------------------------------------------|--------|-----------------------------------------------------------------------------|
+| **Get insider trades by ticker**               | ✅     | `GET /insider_trades/{{ticker_id}}`  - Retrieve insider trades by stock ticker. Optional: date range, type        |
+| **Get insider trades by date range**           | ✅     | `GET /insider_trades`  - Retrieve insider trades by date range. Optional: transaction type          |
+
+---
 
 ### Admin Features (Login Required)
-- [X] **Force Refresh / Bootstrapping**: `{{base-url}}/admin/generate_client_id` 
-  Runs a web scraping script to refresh the data.
-- [X] **Generate Client Id**: `{{base-url}}/admin/generate_client_id` 
-  Create a new client id and password (display only once)
-- [X] **Daily Sync**: 
-  Not available as an endpoint. 
-- [ ] **Enable/Disable Daily Sync**: 
-  Enable or disable the daily sync (using Celery with Redis - is this an overkill?).
-- [ ] **Dump Data to CSV**: 
-  Export the data into a CSV format.
-- [ ] **Bulk Upload**: 
-  - File size limit: ~5 MB 
-  - [ ] Validate CSV file contents
-  - [ ] Load data from a CSV file
-  - [ ] Use "all or nothing" for error handling: Rollback on failure
 
-**Bootstrapping** will trigger the web scraping script on [openinsider.com](http://openinsider.com) and save the data into CSV files. These files are then processed and imported into the database in batches. By default, the earliest data extraction date is set to **2003-01-01** (YYYY-MM-DD), but this can be configured.
+| Feature                        | Status | Endpoint / Notes                                                                 |
+|--------------------------------|--------|----------------------------------------------------------------------------------|
+| **Force Refresh / Bootstrapping** | ✅     | `POST /admin/bootstrap` - Run scraping script to refresh data                  |
+| **Generate Client ID**         | ✅     | `POST /admin/generate_client_id` - Returns a one-time-use ID and password      |
+| **Daily Sync**                 | ✅     | Enabled by default - runs at midnight UTC (not exposed as an endpoint)         |
+| **Enable/Disable Daily Sync** | 🚧     | Planned - toggle daily sync task (Celery + Redis)                               |
+| **Dump Data to CSV**           | 🚧     | Planned - export DB contents to CSV                                            |
+| **Bulk Upload (CSV)**          | 🚧     | Planned - file limit ~5MB                                                      |
+| &nbsp;&nbsp;&nbsp;• Validate CSV contents  | 🚧     | Check headers, format, and required fields                                     |
+| &nbsp;&nbsp;&nbsp;• Load data from CSV     | 🚧     | Parse and ingest file contents into database                                   |
+| &nbsp;&nbsp;&nbsp;• Rollback on failure    | 🚧     | "All or nothing" import behavior for data integrity                            |
 
-**Daily Sync** is enabled by default, meaning once the system is live, new data is fetched and processed every day at midnight GMT/UTC.
+---
+
+### Security
+
+#### JWT Authentication
+- **Access Token** must be sent via the `Authorization: Bearer <token>` header for every requests.
+- **Refresh Token** is send and receive in an `HttpOnly` cookie - this prevents access from JavaScript, helping mitigate **XSS attacks**.
+
+#### CSRF Protection
+- A **CSRF token** will be issued as a normal (non-HttpOnly) cookie.
+- The requests must send this token back in the `X-CSRF-Token` header for `/auth/refresh`. This is to provent **Cross-Site Request Forgery** attacks.
+
+#### Example using `curl` (adapt accordingly for client calls):
+```bash
+# authenticate and store the http cookies into txt
+curl --verbose -c cookies.txt https://localhost:<port>/auth/token \
+  -d 'username=<api-key>&password=<password>'
+
+# Use stored cookie and send CSRF token in header
+curl --verbose -b cookies.txt -c cookies.txt -X POST \
+  https://localhost:<port>/auth/refresh \
+  -H "X-CSRF-Token: <csrf-token>"
+```
+
+### Additional Notes
+
+- **Bootstrapping** triggers scraping from [openinsider.com](http://openinsider.com) and imports data starting from `2003-01-01` (configurable).
+- **Daily Sync** runs every midnight (UTC) to pull and ingest new data automatically.
 
 ## How to Run Locally
 
@@ -69,22 +99,22 @@ This project provides API endpoints to retrieve insider trading transactions (SE
 3. Set up environment variables in a `.env` file (example):
   ```
   SQLALCHEMY_DATABASE_URL=sqlite:///./<your-sqlite3>.db
-  BASE_URL="http://openinsider.com/screener"
+  BASE_URL="http://openinsider.com/screener"  # this is where data is scraped 
   SECRET_KEY="<your-secret-key>"
   ALGORITHM="<your-jwt-algorithm>"
   ACCESS_TOKEN_EXPIRE_MINUTES=30
-  MAX_WORKERS=3  # Number of threads for data extraction
-  DEFAULT_FILLING_DAYS=1  # Custom filling date
-  TRADE_DATE_FILTER=0  # Trade date = all dates
-  OUTPUT_FILE="<your-output-filename>"  # File to save the extracted data
+  MAX_WORKERS=3                               # Number of threads for data extraction
+  DEFAULT_FILLING_DAYS=1                      # Custom filling date
+  TRADE_DATE_FILTER=0                         # Trade date = all dates
+  OUTPUT_FILE="<your-output-filename>"        # File to save the extracted data
   MAX_ROWS=5000
   SUPER_ADMIN_ID="<uuid>"
   SUPER_ADMIN_SECRET="<passcode>"
-  REDIS_URL="<redis-url>" # or the hostname/IP address of your Redis server
-  REDIS_PASSWORD="<redis-pass>" # If Redis requires authentication, put the password here
+  REDIS_URL="<redis-url>"                     # Optional: the hostname/IP address of your Redis server for caching. If not defined, cache falls back to SQLite. This is for rate-limiting
+  REDIS_PASSWORD="<redis-pass>"               # If Redis requires authentication, put the password here
   REDIS_PORT=6379
-  REDIS_EX=600 # Optional: Set the expiration time (in seconds) for Redis keys
-  COOKIE_SECURE=False  # Set to True if using HTTPS
+  REDIS_EX=600                                # Optional: Set the expiration time (in seconds) for Redis keys
+  COOKIE_SECURE=True                          # Set to True if using HTTPS
   ```
 4. Run the application:
   ```bash
