@@ -1,3 +1,4 @@
+import os
 from bs4 import BeautifulSoup
 from fastapi import Depends
 from sqlalchemy.orm import Session 
@@ -36,21 +37,21 @@ def parse_date(value):
     return None
 
 def clear_data(db: Session): 
-    """
-    Deletes all records from the Transaction table.
-    Parameters: db (Session) which is the database session.
-    Returns: None
-    Raises: Exception for any issues
-    """
-    try:
-        db.query(model.Transaction).delete()  # Delete all records
-        db.commit()  # Commit the changes
-        print("All transaction records have been deleted.")
-    except Exception as e:
-        db.rollback()  # Rollback in case of an error
-        print(f"Error clearing transaction data: {str(e)}")
-        raise
-
+  """
+  Deletes all records from the Transaction table.
+  Parameters: db (Session) which is the database session.
+  Returns: None
+  Raises: Exception for any issues
+  """
+  try:
+    db.query(model.Transaction).delete()  # Delete all records
+    db.commit()  # Commit the changes
+    print("All transaction records have been deleted.")
+  except Exception as e:
+    db.rollback()  # Rollback in case of an error
+    print(f"Error clearing transaction data: {str(e)}")
+    raise
+  
 def bootstrap_data(db: Session, start_year: int, daily_sync):
   """
   Initializes the data extraction process.
@@ -60,7 +61,7 @@ def bootstrap_data(db: Session, start_year: int, daily_sync):
   try: 
     if extract_data(start_year, daily_sync): # Extract data from the source
       print("Importing data into the database...")
-      import_data(db) # Import data into the database
+      import_data(db, daily_sync) # Import data into the database
     print("Bootstrap completed successfully!")
   except Exception as e:
     print(f"Bootstrap failed with the error: {e}.")
@@ -85,8 +86,8 @@ def extract_data(start_year: int, daily_sync: bool = False):
       raise ValueError(f"Invalid start_year {start_year}. It cannot be in the future.")
     with ThreadPoolExecutor(max_workers=int(settings.MAX_WORKERS)) as executor:
       for year in range(start_year, current_year + 1):
-        start_month = 1 if year != 2013 else 3
-        end_month = current_month if year == current_year else 12
+        start_month = 1 if year != 2013 else 3 # this is hardcoded to start from March 2013, to accomodate the data available on openinsider.com
+        end_month = current_month if year == current_year else 12 # end_month is current month if it is the current year, otherwise it is December
         if daily_sync and year == current_year: # for daily sync only
           start_month = current_month
         for month in range(start_month, end_month + 1):
@@ -97,31 +98,32 @@ def extract_data(start_year: int, daily_sync: bool = False):
             end_date = datetime(year, month, current_day - 1) if month == end_month else (datetime(year, month, 1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
             end_date = end_date.strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
 
-          futures.append(executor.submit(scrape_data_by_date_range, start_date, end_date))
+          # after getting start_date and end_date, scrape the data and pass it to the thread, which means every thread will scrape data for a specific month
+          futures.append(executor.submit(scrape_data_by_date_range, start_date, end_date)) 
 
           # Process futures as they complete
           for future in as_completed(futures):
             try:
               result = future.result()
-              if result is not None:
-                data.extend(result)
+              if result is None:
+                print(f"No data found for the date range {start_date} to {end_date}.")
             except Exception as e:
                 print(f"Error occurred while processing data: {e}")
 
-        # Write to CSV
-        try: 
-          if daily_sync: # for daily sync
-             filename = f"openinsider_{current_year}_{current_month}_{current_day}.csv"
-          else: # for bootstrap 
-              filename = settings.OUTPUT_FILE # for bootstrap 
-          with open(filename, 'w', newline='') as f:
-            print("Writing to CSV file...")
-            writer = csv.writer(f)
-            writer.writerow(COLUMN_HEADERS)
-            writer.writerows(data)
-          print(f"CSV file '{filename}' saved successfully!")
-        except IOError as e:
-          raise IOError(f"Error writing to CSV file: {str(e)}")
+        # # Write to CSV
+        # try: 
+        #   if daily_sync: # for daily sync
+        #      filename = f"openinsider_{current_year}_{current_month}_{current_day}.csv"
+        #   else: # for bootstrap 
+        #       filename = settings.OUTPUT_FILE # for bootstrap 
+        #   with open(filename, 'w', newline='') as f:
+        #     print("Writing to CSV file...")
+        #     writer = csv.writer(f)
+        #     writer.writerow(COLUMN_HEADERS)
+        #     writer.writerows(data)
+        #   print(f"CSV file '{filename}' saved successfully!")
+        # except IOError as e:
+        #   raise IOError(f"Error writing to CSV file: {str(e)}")
   except Exception as e:
     print(f"Unexpected error in extract_data: {str(e)}")
     raise
@@ -148,9 +150,26 @@ def scrape_data_by_date_range(start_date, end_date):
       ele = cols[idx].find('a').text.strip() if cols[idx].find('a') else cols[idx].text.strip()
       cleaned_row.insert(idx,ele)
     cleaned_rows.append(cleaned_row)
+  if cleaned_rows:
+    year_obj = datetime.strptime(start_date, '%m/%d/%Y').year
+    month_obj = datetime.strptime(start_date, '%m/%d/%Y').month
+    day_obj = datetime.strptime(start_date, '%m/%d/%Y').day
+    filename = f"openinsider_{year_obj}_{month_obj:02d}_{day_obj}.csv" 
+    write_to_csv(cleaned_rows, os.path.join(settings.OUTPUT_DIR, filename),COLUMN_HEADERS) # write to CSV file
   return cleaned_rows
 
-def import_data(db: Session):
+def write_to_csv(data, filename, headers):
+  try: 
+    with open(filename, 'w', newline='') as f:
+      print("Writing to CSV file...")
+      writer = csv.writer(f)
+      writer.writerow(headers)
+      writer.writerows(data)
+      print(f"CSV file '{filename}' saved successfully!")
+  except IOError as e:
+    raise IOError(f"Error writing to CSV file: {str(e)}")
+
+def import_data(db: Session, daily_sync: bool = False):
   """
   Imports necessary data into the system.
   Parameters: None
@@ -160,9 +179,36 @@ def import_data(db: Session):
     ValueError: If the import data format is incorrect.
     IOError: If there is an issue with reading from the source.
   """
+  if not daily_sync:
+    try:
+      files = os.listdir(settings.OUTPUT_DIR)
+    except FileNotFoundError:
+      print(f"Directory '{settings.OUTPUT_DIR}' not found.")
+      return []
+    # Filter files based on the naming convention
+    files = [f for f in files if f.startswith("openinsider_") and f.endswith(".csv")]
+  else: # for daily sync, we only import the latest file
+    year = datetime.now().year
+    month = datetime.now().month
+    current_day = datetime.now().day
+    filename = f"openinsider_{year}_{month:02d}_{current_day:02d}.csv"
+    files = [filename] # this is a placeholder, we will replace it with the actual file name
+
+  for file in files:
+    file_name = os.path.join(settings.OUTPUT_DIR, file)
+    with ThreadPoolExecutor(max_workers=int(settings.MAX_WORKERS)) as executor:
+      future = executor.submit(import_file_db, db, file_name)
+      try:
+        result = future.result()  # Wait for the thread to complete
+        if result:
+          print(f"Successfully imported data from {file_name}")
+      except Exception as e:
+        print(f"Error importing data from {file_name}: {str(e)}")
+    
+def import_file_db(db: Session, file_name: str):
   try:
-    with open(settings.OUTPUT_FILE, newline="", encoding="utf-8") as file:
-      reader = csv.DictReader(file)  # Reads CSV with column names
+    with open(file_name, newline="", encoding="utf-8") as f:
+      reader = csv.DictReader(f)  # Reads CSV with column names
       transactions = []
       for row in reader:
           transactions.append(model.Transaction(

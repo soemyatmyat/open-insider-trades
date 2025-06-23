@@ -35,7 +35,7 @@ BASE_URL=os.environ.get("BASE_URL")
 DEFAULT_FILLING_DAYS=os.environ.get("DEFAULT_FILLING_DAYS")
 TRADE_DATE_FILTER=os.environ.get("TRADE_DATE_FILTER")
 MAX_WORKERS=os.environ.get("MAX_WORKERS")
-OUTPUT_FILE=os.path.join(basedir, os.environ.get("OUTPUT_FILE"))
+OUTPUT_DIR=os.path.join(basedir, os.environ.get("OUTPUT_DIR"))
 COLUMN_HEADERS=os.environ.get("COLUMN_HEADERS")
 MAX_ROWS=os.environ.get("MAX_ROWS")
 

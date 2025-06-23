@@ -28,7 +28,7 @@ async def bootstrap(current_user: authSchema.Client = Security(get_current_clien
   except Exception as e:
     raise exceptions.internal_server_exception(detail="A generic error occurred on the server.")
 
-# @router.get("/daily_sync", tags=["Admin"]) # admin api endpoint (for testing purpose)
+@router.get("/daily_sync", tags=["Admin"]) # admin api endpoint (for testing purpose)
 async def daily_sync(db: Session = Depends(get_db)):
   try:
     current_year = datetime.now().year # Get the current year
