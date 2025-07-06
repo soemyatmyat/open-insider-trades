@@ -13,6 +13,7 @@ SECRET_KEY=os.environ.get("SECRET_KEY")
 ALGORITHM=os.environ.get("ALGORITHM") 
 ACCESS_TOKEN_EXPIRE_MINUTES=os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES")
 COOKIE_SECURE=os.environ.get("COOKIE_SECURE", "false").lower() == "true" # should be True in production with HTTPS
+COOKIE_DOMAIN=os.environ.get("COOKIE_DOMAIN", "localhost") # should be set to the domain of the app in production
 SQLALCHEMY_DATABASE_URL=os.environ.get("SQLALCHEMY_DATABASE_URL")
 REDIS_URL=os.environ.get("REDIS_URL")
 REDIS_PASSWORD=os.environ.get("REDIS_PASSWORD")

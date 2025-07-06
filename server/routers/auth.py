@@ -41,9 +41,10 @@ async def refresh_token(
   db: Session=Depends(get_db),
   refresh_token: str = Cookie(None),
   csrf_cookie: str = Cookie(None, alias="csrf_token"),
-  csrf_header: str = Header(None, alias="X-CSRF-Token")
+  csrf_header: str = Header(None, alias="X-CSRF-TOKEN")
   ) -> auth_schema.Token:
 
+  print(f"csrf_cookie: {csrf_cookie}, csrf_header: {csrf_header}, refresh_token: {refresh_token}")
   if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
     raise exceptions.forbidden_exception("CSRF token mismatch")
   
@@ -75,11 +76,12 @@ def set_csrf_token_cookie(user, response: Response):
     response.set_cookie(
         key="csrf_token",
         value=csrf_token,
-        httponly=False,
-        secure=settings.COOKIE_SECURE,
-        samesite="None",
         max_age=7 * 24 * 60 * 60,  # 7 days
-        path="/"  # Set the path to root so it is sent with every request
+        path="/",  # Set the path to root so it is sent with every request
+        domain=settings.COOKIE_DOMAIN,  # Set the domain to the same as the app
+        secure=settings.COOKIE_SECURE,
+        httponly=False,
+        samesite="None"
     )
 
 def set_refresh_token_cookie(user, response: Response, refresh_token: str):
@@ -88,11 +90,11 @@ def set_refresh_token_cookie(user, response: Response, refresh_token: str):
   response.set_cookie(
       key="refresh_token",
       value=refresh_token,
-      httponly=True,
-      secure=settings.COOKIE_SECURE,
-      samesite="None",
       max_age=7 * 24 * 60 * 60,  # 7 days
-      path="/"  # Set the path to root so it is sent with every request
+      path="/",  # Set the path to root so it is sent with every request
+      secure=settings.COOKIE_SECURE,
+      httponly=True,
+      samesite="None"
   )
 
 async def get_current_client(security_scopes: SecurityScopes, token: Annotated[str, Depends(auth_mgr.oauth2_scheme)], db: Session = Depends(get_db)):

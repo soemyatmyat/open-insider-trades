@@ -44,7 +44,7 @@ This project provides API endpoints to retrieve insider trading transactions (SE
 | **Force Refresh / Bootstrapping** | ✅     | `POST /admin/bootstrap` - Run scraping script to refresh data                  |
 | **Generate Client ID**         | ✅     | `POST /admin/generate_client_id` - Returns a one-time-use ID and password      |
 | **Daily Sync**                 | ✅     | Enabled by default - runs at midnight UTC (not exposed as an endpoint)         |
-| **Enable/Disable Daily Sync** | 🚧     | Planned - toggle daily sync task (Celery + Redis)                               |
+| **Enable/Disable Daily Sync** | 🚧     | Planned - toggle daily sync task                               |
 | **Dump Data to CSV**           | 🚧     | Planned - export DB contents to CSV                                            |
 | **Bulk Upload (CSV)**          | 🚧     | Planned - file limit ~5MB                                                      |
 | &nbsp;&nbsp;&nbsp;• Validate CSV contents  | 🚧     | Check headers, format, and required fields                                     |
