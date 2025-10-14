@@ -8,8 +8,15 @@ This project provides API endpoints to retrieve insider trading transactions (SE
 - BeautifulSoup – for web scraping from openinsider.com.
 - SQLAlchemy – for ORM-based database interactions.
 - SQLite3 – as the primary database.
-- Redis – for rate limiting and caching. 
+- Redis – used for rate limiting and caching. Rate limit parameters are defined in the settings and are role-based, allowing different limits per user (useful when a user can create multiple keys). The rate limiting uses a sliding window approach:
+Sliding Window Mechanism:
+(1) Store timestamps of recent requests within the last n seconds.
+For each incoming request:
+(2) Remove timestamps older than n seconds.
+(3) Count the remaining timestamps.
+If the count is greater than or equal to the allowed limit, block the request. Otherwise, allow it and log the new timestamp.
 - [JWT Authentication](https://datatracker.ietf.org/doc/html/rfc7519) with refresh_token
+- [APScheduler](https://apscheduler.readthedocs.io/en/3.x/userguide.html) for cron job trigger embedded into the FastAPI. This is not a scalable approach. A better solution would be to containerize the cron jobs OR better yet, implement celery + redis. 
 
 ## Features
 
@@ -44,7 +51,7 @@ This project provides API endpoints to retrieve insider trading transactions (SE
 | **Force Refresh / Bootstrapping** | ✅     | `POST /admin/bootstrap` - Run scraping script to refresh data                  |
 | **Generate Client ID**         | ✅     | `POST /admin/generate_client_id` - Returns a one-time-use ID and password      |
 | **Daily Sync**                 | ✅     | Enabled by default - runs at midnight UTC (not exposed as an endpoint)         |
-| **Enable/Disable Daily Sync** | 🚧     | Planned - toggle daily sync task                               |
+| **Enable/Disable Daily Sync** | ✅      | Toggle daily sync task                               |
 | **Dump Data to CSV**           | 🚧     | Planned - export DB contents to CSV                                            |
 | **Bulk Upload (CSV)**          | 🚧     | Planned - file limit ~5MB                                                      |
 | &nbsp;&nbsp;&nbsp;• Validate CSV contents  | 🚧     | Check headers, format, and required fields                                     |
@@ -77,7 +84,7 @@ curl --verbose -b cookies.txt -c cookies.txt -X POST \
 
 ### Additional Notes
 
-- **Bootstrapping** triggers scraping from [openinsider.com](http://openinsider.com) and imports data starting from `2003-01-01` (configurable).
+- **Bootstrapping** triggers scraping from [openinsider.com](http://openinsider.com) and imports data starting from `2003-01-01` (configurable). 
 - **Daily Sync** runs every midnight (UTC) to pull and ingest new data automatically.
 
 ## How to Run Locally
@@ -103,22 +110,27 @@ curl --verbose -b cookies.txt -c cookies.txt -X POST \
   SECRET_KEY="<your-secret-key>"
   ALGORITHM="<your-jwt-algorithm>"
   ACCESS_TOKEN_EXPIRE_MINUTES=30
-  MAX_WORKERS=3                               # Number of threads for data extraction
+  MAX_WORKERS=3                               # Number of threads for data extraction and import
   DEFAULT_FILLING_DAYS=1                      # Custom filling date
   TRADE_DATE_FILTER=0                         # Trade date = all dates
   OUTPUT_FILE="<your-output-filename>"        # File to save the extracted data
   MAX_ROWS=5000
   SUPER_ADMIN_ID="<uuid>"
   SUPER_ADMIN_SECRET="<passcode>"
-  REDIS_URL="<redis-url>"                     # Optional: the hostname/IP address of your Redis server for caching. If not defined, cache falls back to SQLite. This is for rate-limiting
+  REDIS_URL="<redis-url>"                     # Optional: the hostname/IP address of your Redis server for caching. If not defined, cache falls back to SQLite. This is for rate-limiting. If redis is not available, rate-limit falls back to sql. 
   REDIS_PASSWORD="<redis-pass>"               # If Redis requires authentication, put the password here
   REDIS_PORT=6379
   REDIS_EX=600                                # Optional: Set the expiration time (in seconds) for Redis keys
   COOKIE_SECURE=True                          # Set to True if using HTTPS
+  COOKIE_DOMAIN="" # Domain for the cookie
   ```
 4. Run the application:
   ```bash
   uvicorn main:app --reload
+  ```
+  With local certs
+  ```bash
+  uvicorn main:app --host 127.0.0.1 --port 8000 --reload --ssl-keyfile=key.pem --ssl-certfile=cert.pem
   ```
 
 The API will be available at `http://127.0.0.1:8000`.
@@ -148,10 +160,13 @@ open-insider-trades/
 │  │   ├── auth.py       
 │  │   └── utils 
 │  │       └── token.py 
+│  ├── scheduler/                # 5/ For scheduling logic
+│  │   └── scheduler.py          # configure and start APScheduler which triggers the daily
 │  ├── requirements.txt          # Libraries Dependencies
 │  ├── Dockerfile                # Docker configuration
 │  ├── .env                      # Environment variables
-│  └── .dockerignore             # Files ignored during Docker build
+│  ├── .dockerignore             # Files ignored during Docker build
+│  └── out                       # Folder to store the scrapped data 
 ├── .gitignore                   # Git ignored files
 ├── build.sh                     # Shell script to run the app locally
 ├── .env                         # Redis environment variables
@@ -165,3 +180,5 @@ This project follows:
 1. The best practices outlined by the [Twelve-Factor App](https://12factor.net), treating logs as event streams.
 2. The [Style Guide for Python Code](https://peps.python.org/pep-0008/) to ensure clean, readable, and consistent code.
 3. The data validation library for Python: [Pydantic](https://docs.pydantic.dev/latest/)
+4. [FastAPI documentation](https://fastapi.tiangolo.com/)
+5. [Beautiful Soup documentation](https://beautiful-soup-4.readthedocs.io/en/latest/)

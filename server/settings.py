@@ -7,6 +7,7 @@ load_dotenv(os.path.join(basedir, '.env')) # take environment variables from .en
 # ============================
 # Environment Constants
 # ============================
+ORIGINS=os.environ.get("ORIGINS", "*").split(",") # for CORS, default is all origins
 BASEDIR_APP=os.path.abspath(os.path.dirname(__file__))
 DATABASE_PATH=os.environ.get("DATABASE_PATH")
 SECRET_KEY=os.environ.get("SECRET_KEY") 
@@ -18,7 +19,7 @@ SQLALCHEMY_DATABASE_URL=os.environ.get("SQLALCHEMY_DATABASE_URL")
 REDIS_URL=os.environ.get("REDIS_URL")
 REDIS_PASSWORD=os.environ.get("REDIS_PASSWORD")
 REDIS_PORT=os.environ.get("REDIS_PORT")
-REDIS_EX=os.environ.get("REDIS_EX")
+REDIS_EX=os.environ.get("REDIS_EX", 600)  # Default to 600 seconds if not set
 
 # ============================
 # Rate Limiter Constants
@@ -45,3 +46,9 @@ MAX_ROWS=os.environ.get("MAX_ROWS")
 # ============================
 SUPER_ADMIN_ID = os.environ.get("SUPER_ADMIN_ID")
 SUPER_ADMIN_SECRET = os.environ.get("SUPER_ADMIN_SECRET")
+
+# ============================
+# DAILY SYNC Constants
+# ============================
+DAILY_SYNC_HOUR=os.environ.get("DAILY_SYNC_HOUR", 20) # default is 20 (8 PM)
+MISFIRE_GRACE_TIME=os.environ.get("MISFIRE_GRACE_TIME", 3600) # default is 3600 seconds (1 hour)

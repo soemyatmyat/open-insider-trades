@@ -262,7 +262,7 @@ def retrieve_by_ticker(db: Session, ticker_id:str):
     return None # not found then, return None
   return existing_ticker
 
-def retrieve_transactions(db: Session, ticker_id: str, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None, trade_type = None, skip: int = 0, limit: int = 100):
+def retrieve_transactions(db: Session, ticker_id: str, from_date: Optional[date] = None, to_date: Optional[date] = None, trade_type = None, skip: int = 0, limit: int = 100):
   # If from_date is not provided, set it to the default: earliest date 
   if not from_date:
     from_date = datetime.today() # todo: to change to the earliest date

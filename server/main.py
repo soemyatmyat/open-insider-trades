@@ -5,16 +5,25 @@ from routers.transaction import router as transact_router
 from routers.admin import router as admin_router
 from routers.auth import router as auth_router
 from db import engine, Base 
+from contextlib import asynccontextmanager
+from scheduler.scheduler import start_scheduler
+import settings
 from services.seeding import seed_super_admin
 
-app = FastAPI()
+# for handling lifespan events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+  # Startup code
+  start_scheduler()
+  yield
+  # Shutdown code if there is any
 
-# Configure CORS 
-origins = ["*"] # this need to be changed later, to only allow whitelisted IPs 
-#origins = ["https://finance.boring-is-good.com"]
+# Initialize the app with the lifespan context manager
+app = FastAPI(lifespan=lifespan)
+
 app.add_middleware(
   CORSMiddleware,
-  allow_origins=origins, 
+  allow_origins=settings.ORIGINS, # List of origins that are allowed to make cross-origin requests
   allow_credentials=True, # Allow Credentials (Authorization headers, Cookies, etc) to be included in the requests
   allow_methods=["GET","POST","PUT","DELETE","OPTIONS"], # Specify the allowed HTTP methods
   allow_headers=["*"], # Specify the allowed headers 
@@ -26,6 +35,7 @@ app.add_middleware(
 async def redirect_to_docs():
   return RedirectResponse(url="/docs")
 
+# Add the routers
 app.include_router(transact_router, prefix="/insider_trades")
 app.include_router(admin_router, prefix="/admin")
 app.include_router(auth_router, prefix="/auth")
@@ -34,3 +44,5 @@ app.include_router(auth_router, prefix="/auth")
 Base.metadata.create_all(bind=engine) 
 # Create necessary seeds for the database
 seed_super_admin()
+
+

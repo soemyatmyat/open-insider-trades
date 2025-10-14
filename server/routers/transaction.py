@@ -12,6 +12,13 @@ from routers.utils import exceptions
 
 router = APIRouter()
 
+'''
+Retrieve insider transactions by ticker
+params: from_date, to_date, transaction_type
+response: list of transactions
+permission: read
+dependencies: get_current_client, get_db, get_redis_client
+'''
 @router.get("/{ticker_id}", response_model=list[tranact_schema.Transaction]) 
 async def retrieve_by_ticker(ticker_id: str,
   params: tranact_schema.TransactionParams = Depends(), 
@@ -45,15 +52,24 @@ async def retrieve_by_ticker(ticker_id: str,
   )
   return transactions or []
 
+'''
+Retrieve insider transactions by date range
+params: from_date, to_date, transaction_type
+response: list of transactions
+permission: read
+dependencies: get_current_client, get_db, get_redis_client
+'''
 @router.get("", response_model=list[tranact_schema.Transaction]) 
 async def retrieve_by_date_range(
   params: tranact_schema.TransactionDateRange = Depends(), 
   current_user: authSchema.Client = Security(get_current_client, scopes=["read"]), 
-  db: Session=Depends(get_db)):
+  db: Session=Depends(get_db),
+  redis_client: redis.Redis = Depends(redis_client.get_redis_client)
+  ):
 
   # rate limit validation
   try:
-    rate_limiter.validate_rate_limit(current_user, db)
+    rate_limiter.validate_rate_limit(current_user, db, redis_client)
   except rate_limiter.RateLimitExceededException:
     raise exceptions.too_many_requests_exception("Rate limit exceeded. Please try again later.")
   
@@ -66,6 +82,6 @@ async def retrieve_by_date_range(
     "",
     params.from_date,
     params.to_date,
-    params.transaction_type.value
+    params.transaction_type
   )
   return transactions or []

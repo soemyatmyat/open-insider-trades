@@ -30,6 +30,7 @@ async def bootstrap(current_user: authSchema.Client = Security(get_current_clien
 
 @router.get("/daily_sync", tags=["Admin"]) # admin api endpoint (for testing purpose)
 async def daily_sync(db: Session = Depends(get_db)):
+  print(f"Running daily sync at {datetime.now()}")
   try:
     current_year = datetime.now().year # Get the current year
     transact_mgr.bootstrap_data(db, current_year, True) # Call the bootstrap_data function
