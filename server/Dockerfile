@@ -19,7 +19,7 @@ COPY . .
 EXPOSE 8000
 
 # Define environment variable
-ENV UVICORN_CMD="uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+ENV UVICORN_CMD="uvicorn main:app --host 0.0.0.0 --port 8000"
 
 # Run uvicorn server
 CMD ["sh", "-c", "$UVICORN_CMD"]

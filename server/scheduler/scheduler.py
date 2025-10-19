@@ -1,7 +1,7 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from routers.admin import daily_sync
+from routers.admin import daily_sync_schedule
 import settings
 
 # A scheduler that runs on an asyncio (:pep:`3156`) event loop.
@@ -14,8 +14,8 @@ def start_scheduler():
   # now = datetime.now() + timedelta(seconds=30)  # 10 seconds in the future
   # print("now: ", now)
   scheduler.add_job(
-    daily_sync,
-    CronTrigger(hour=settings.DAILY_SYNC_HOUR),  # run daily at 20:00 local system timezone # this should be in settings.py
+    daily_sync_schedule,
+    CronTrigger(hour=settings.DAILY_SYNC_HOUR),  # run daily at 20:00 local system timezone 
     # IntervalTrigger(seconds=30),  # runs every 30 seconds
     id="daily_extract", 
     replace_existing=True,

@@ -105,26 +105,43 @@ curl --verbose -b cookies.txt -c cookies.txt -X POST \
   ```
 3. Set up environment variables in a `.env` file (example):
   ```
+  # ============================
+  # Environment Constants
+  # ============================
+  ORIGINS=os.environ.get("ORIGINS", "*").split(",") # for CORS, default is all origins
   SQLALCHEMY_DATABASE_URL=sqlite:///./<your-sqlite3>.db
-  BASE_URL="http://openinsider.com/screener"  # this is where data is scraped 
   SECRET_KEY="<your-secret-key>"
   ALGORITHM="<your-jwt-algorithm>"
   ACCESS_TOKEN_EXPIRE_MINUTES=30
+  COOKIE_SECURE=True                          # Set to True if using HTTPS
+  COOKIE_DOMAIN=""                            # Domain for the cookie
+
+  # ============================
+  # BSoup Configurable Constants
+  # ============================
+  BASE_URL="http://openinsider.com/screener"  # this is where data is scraped 
   MAX_WORKERS=3                               # Number of threads for data extraction and import
   DEFAULT_FILLING_DAYS=1                      # Custom filling date
   TRADE_DATE_FILTER=0                         # Trade date = all dates
   OUTPUT_FILE="<your-output-filename>"        # File to save the extracted data
   MAX_ROWS=5000
+
+  # ============================
+  # API Constants
+  # ============================
   SUPER_ADMIN_ID="<uuid>"
   SUPER_ADMIN_SECRET="<passcode>"
+
+  # ============================
+  # Redis Constants
+  # ============================
   REDIS_URL="<redis-url>"                     # Optional: the hostname/IP address of your Redis server for caching. If not defined, cache falls back to SQLite. This is for rate-limiting. If redis is not available, rate-limit falls back to sql. 
   REDIS_PASSWORD="<redis-pass>"               # If Redis requires authentication, put the password here
   REDIS_PORT=6379
   REDIS_EX=600                                # Optional: Set the expiration time (in seconds) for Redis keys
-  COOKIE_SECURE=True                          # Set to True if using HTTPS
-  COOKIE_DOMAIN="" # Domain for the cookie
+
   ```
-4. Run the application:
+4. Run the application with reload:
   ```bash
   uvicorn main:app --reload
   ```
@@ -161,7 +178,7 @@ open-insider-trades/
 │  │   └── utils 
 │  │       └── token.py 
 │  ├── scheduler/                # 5/ For scheduling logic
-│  │   └── scheduler.py          # configure and start APScheduler which triggers the daily
+│  │   └── scheduler.py          # configure and start APScheduler which triggers the daily extracting of insider trades 
 │  ├── requirements.txt          # Libraries Dependencies
 │  ├── Dockerfile                # Docker configuration
 │  ├── .env                      # Environment variables

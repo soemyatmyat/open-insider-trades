@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
   # Shutdown code if there is any
 
 # Initialize the app with the lifespan context manager
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, debug=False, title="Open Insider Trades API", version="1.0.0", description="API for tracking and analyzing insider trades data")
 
 app.add_middleware(
   CORSMiddleware,

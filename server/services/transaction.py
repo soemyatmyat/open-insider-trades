@@ -107,6 +107,7 @@ def extract_data(start_year: int, daily_sync: bool = False):
               result = future.result()
               if result is None:
                 print(f"No data found for the date range {start_date} to {end_date}.")
+                return False
             except Exception as e:
                 print(f"Error occurred while processing data: {e}")
 

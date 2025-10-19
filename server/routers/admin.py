@@ -37,4 +37,16 @@ async def daily_sync(db: Session = Depends(get_db)):
   except Exception as e:
     raise exceptions.internal_server_exception(detail="A generic error occurred on the server.")
   
+async def daily_sync_schedule():
+  print(f"Running daily sync at {datetime.now()}")
+  db = next(get_db()) # Start running the get_db() generator until it yields something, and give me that yielded value.
+  try:
+    current_year = datetime.now().year # Get the current year
+    transact_mgr.bootstrap_data(db, current_year, True) # Call the bootstrap_data function
+  except Exception as e:
+    raise exceptions.internal_server_exception(detail="A generic error occurred on the server.")
+  finally:
+    db.close() # we manually close the DB session since we created it outside of a request context
+  
+  
 

@@ -44,7 +44,7 @@ async def refresh_token(
   csrf_header: str = Header(None, alias="X-CSRF-TOKEN")
   ) -> auth_schema.Token:
 
-  print(f"csrf_cookie: {csrf_cookie}, csrf_header: {csrf_header}, refresh_token: {refresh_token}")
+  # print(f"csrf_cookie: {csrf_cookie}, csrf_header: {csrf_header}, refresh_token: {refresh_token}")
   if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
     raise exceptions.forbidden_exception("CSRF token mismatch")
   

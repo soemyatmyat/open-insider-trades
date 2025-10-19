@@ -32,7 +32,7 @@ def validate_rate_limit_with_sqlite(db: Session, current_user_id: str, max_api_c
   # Fallback to sqlite3 if Redis is not available
   now = datetime.now(UTC)
   window_start = now - timedelta(seconds=rate_windows_seconds)
-  print("Current User id: ", current_user_id, ", Window start: ", window_start)
+  # print("Current User id: ", current_user_id, ", Window start: ", window_start)
   # Delete old timestamps (older than the rate window)
   db.query(model.Request_Log).filter(
     model.Request_Log.client_id == current_user_id,
@@ -44,7 +44,7 @@ def validate_rate_limit_with_sqlite(db: Session, current_user_id: str, max_api_c
     model.Request_Log.client_id == current_user_id,
     model.Request_Log.timestamp >= window_start
   ).count()
-  print("Count: ", count)
+  # print("Count: ", count)
 
   # Block if the count is ≥ limit, otherwise, allow and log the new timestamp
   if count >= max_api_count:
