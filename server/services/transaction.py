@@ -155,7 +155,7 @@ def scrape_data_by_date_range(start_date, end_date):
     year_obj = datetime.strptime(start_date, '%m/%d/%Y').year
     month_obj = datetime.strptime(start_date, '%m/%d/%Y').month
     day_obj = datetime.strptime(start_date, '%m/%d/%Y').day
-    filename = f"openinsider_{year_obj}_{month_obj:02d}_{day_obj}.csv" 
+    filename = f"openinsider_{year_obj}_{month_obj:02d}_{day_obj:02d}.csv" 
     write_to_csv(cleaned_rows, os.path.join(settings.OUTPUT_DIR, filename),COLUMN_HEADERS) # write to CSV file
   return cleaned_rows
 
