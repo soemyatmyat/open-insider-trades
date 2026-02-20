@@ -68,52 +68,52 @@ async def refresh_token(
 
 @router.post("/logout", include_in_schema=True) 
 async def logout(token: str = Depends(auth_mgr.oauth2_scheme)):
-    # revoke the token access (it will expire by default in 30 mins anyway)
-    auth_mgr.revoke_access_token(token)
+  # revoke the token access (it will expire by default in 30 mins anyway)
+  auth_mgr.revoke_access_token(token)
 
 def set_csrf_token_cookie(user, response: Response):
-    csrf_token = auth_mgr.create_token()  # Generate a new CSRF token
-    response.set_cookie(
-        key="csrf_token",
-        value=csrf_token,
-        max_age=7 * 24 * 60 * 60,  # 7 days
-        path="/",  # Set the path to root so it is sent with every request
-        domain=settings.COOKIE_DOMAIN,  # Set the domain to the same as the app
-        secure=settings.COOKIE_SECURE,
-        httponly=False,
-        samesite="None"
-    )
+  csrf_token = auth_mgr.create_token()  # Generate a new CSRF token
+  response.set_cookie(
+      key="csrf_token",
+      value=csrf_token,
+      max_age=7 * 24 * 60 * 60,  # 7 days
+      path="/",  # Set the path to root so it is sent with every request
+      domain=settings.COOKIE_DOMAIN,  # Set the domain to the same as the app
+      secure=settings.COOKIE_SECURE,
+      httponly=False,
+      samesite="None"
+  )
 
 def set_refresh_token_cookie(user, response: Response, refresh_token: str):
   refresh_token = auth_mgr.create_token()
   refresh_tokens_store[refresh_token] = user.client_id  # Store the refresh token in memory (or use a more persistent store like Redis)
   response.set_cookie(
-      key="refresh_token",
-      value=refresh_token,
-      max_age=7 * 24 * 60 * 60,  # 7 days
-      path="/",  # Set the path to root so it is sent with every request
-      secure=settings.COOKIE_SECURE,
-      httponly=True,
-      samesite="None"
+    key="refresh_token",
+    value=refresh_token,
+    max_age=7 * 24 * 60 * 60,  # 7 days
+    path="/",  # Set the path to root so it is sent with every request
+    secure=settings.COOKIE_SECURE,
+    httponly=True,
+    samesite="None"
   )
 
 async def get_current_client(security_scopes: SecurityScopes, token: Annotated[str, Depends(auth_mgr.oauth2_scheme)], db: Session = Depends(get_db)):
-    '''
-    this function will be called for authorization, similar to @app.get("/protected")
-    but this is faciliated with FastAPI: Depends(get_current_client)
-    oath2_scheme is used to get the Bearer token from the request header
-    if the token is invalid, missing or the user is not found, throw an exception
-    '''
-    token_data = auth_mgr.decode_access_token(token) # get the token data
-    if token_data is None:
-        raise exceptions.auth_exception("Token has expired.", headers={"WWW-Authenticate": f'Bearer scope="{security_scopes.scope_str}"'})
-    
-    for scope in security_scopes.scopes:
-        if scope not in token_data.scopes:
-            raise exceptions.forbidden_exception("Not enough permissions", headers={"WWW-Authenticate": f'Bearer scope="{security_scopes.scope_str}"'})
+  '''
+  this function will be called for authorization, similar to @app.get("/protected")
+  but this is faciliated with FastAPI: Depends(get_current_client)
+  oath2_scheme is used to get the Bearer token from the request header
+  if the token is invalid, missing or the user is not found, throw an exception
+  '''
+  token_data = auth_mgr.decode_access_token(token) # get the token data
+  if token_data is None:
+    raise exceptions.auth_exception("Token has expired.", headers={"WWW-Authenticate": f'Bearer scope="{security_scopes.scope_str}"'})
+  
+  for scope in security_scopes.scopes:
+    if scope not in token_data.scopes:
+        raise exceptions.forbidden_exception("Not enough permissions", headers={"WWW-Authenticate": f'Bearer scope="{security_scopes.scope_str}"'})
 
-    # get the client_id from the token sub data if authorization is successful
-    client = auth_mgr.get_client_by_id(db, client_id=token_data.sub) # {"sub": client_id}
-    if client is None:
-        raise exceptions.auth_exception
-    return client # client_id, is_active, role
+  # get the client_id from the token sub data if authorization is successful
+  client = auth_mgr.get_client_by_id(db, client_id=token_data.sub) # {"sub": client_id}
+  if client is None:
+    raise exceptions.auth_exception
+  return client # client_id, is_active, role

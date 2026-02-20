@@ -92,7 +92,7 @@ def extract_data(start_year: int, daily_sync: bool = False):
           start_month = current_month
         for month in range(start_month, end_month + 1):
           if daily_sync and year == current_year and month == current_month: # for daily sync only
-            start_date = end_date = datetime(year, month, current_day).strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
+            start_date = end_date = datetime(year, month, current_day - 1).strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
           else:
             start_date = datetime(year, month, 1).strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
             end_date = datetime(year, month, current_day - 1) if month == end_month else (datetime(year, month, 1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)

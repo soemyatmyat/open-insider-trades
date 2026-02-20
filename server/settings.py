@@ -50,5 +50,5 @@ SUPER_ADMIN_SECRET = os.environ.get("SUPER_ADMIN_SECRET")
 # ============================
 # DAILY SYNC Constants
 # ============================
-DAILY_SYNC_HOUR=os.environ.get("DAILY_SYNC_HOUR", 21) # default is 20 (9 PM)
+DAILY_SYNC_HOUR=os.environ.get("DAILY_SYNC_HOUR", 6) # default is 6 AM local time, it will extract the data from previous day
 MISFIRE_GRACE_TIME=os.environ.get("MISFIRE_GRACE_TIME", 3600) # default is 3600 seconds (1 hour)
