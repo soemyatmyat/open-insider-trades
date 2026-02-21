@@ -51,7 +51,24 @@ def clear_data(db: Session):
     db.rollback()  # Rollback in case of an error
     print(f"Error clearing transaction data: {str(e)}")
     raise
-  
+
+def archive_files():
+  try:
+    # Create archive folder name with today's date
+    today = datetime.now()
+    archive_dir = os.path.join(settings.OUTPUT_DIR,f"archive_openinsider_{today:%Y_%m_%d}")
+    os.makedirs(os.path.dirname(archive_dir), exist_ok=True)
+    # List files to archive
+    files = os.listdir(settings.OUTPUT_DIR)
+    files = [f for f in files if f.startswith("openinsider_") and f.endswith(".csv")]
+    for file in files:
+      src_path = os.path.join(settings.OUTPUT_DIR, file)
+      dst_path = os.path.join(archive_dir, file)
+      os.rename(src_path, dst_path)  # Move file to archive directory
+  except Exception as e:
+    print(f"Error archiving files: {str(e)}")
+    raise 
+
 def bootstrap_data(db: Session, start_year: int, daily_sync):
   """
   Initializes the data extraction process.
@@ -59,7 +76,7 @@ def bootstrap_data(db: Session, start_year: int, daily_sync):
   Returns: None
   """
   try: 
-    if extract_data(start_year, daily_sync): # Extract data from the source
+    if extract_data(start_year, daily_sync): # Extract data from the source and write them to CSV files, if it returns True, then we proceed to import the data into the database, otherwise we skip the import step since there is no data extracted
       print("Importing data into the database...")
       import_data(db, daily_sync) # Import data into the database
     print("Bootstrap completed successfully!")
@@ -69,8 +86,10 @@ def bootstrap_data(db: Session, start_year: int, daily_sync):
 
 def extract_data(start_year: int, daily_sync: bool = False):
   """
-  Extract the data from openinsider.com
-  Parameters: None
+  Extract the data from openinsider.com. end date is computed to be always the previous day.
+  Parameters: 
+  start_year (int): The year to start the data extraction from. It should be a valid year (e.g., 2013).
+  daily_sync (bool): A flag indicating whether to perform a daily sync (True) or a full bootstrap (False). Default is False.
   Returns: True if the extraction was successful, False otherwise. 
   Raises:
     ValueError: If there is an issue with parsing the data
@@ -78,27 +97,28 @@ def extract_data(start_year: int, daily_sync: bool = False):
   """
   current_year = datetime.now().year
   current_month = datetime.now().month
-  current_day = datetime.now().day  
-  data = []
   futures = []
   try:
     if start_year > current_year:
       raise ValueError(f"Invalid start_year {start_year}. It cannot be in the future.")
+    # we use ThreadPoolExecutor to scrape data concurrently for different date ranges (months), which can significantly speed up the extraction process, especially when dealing with a large date range. Each thread will handle the scraping for a specific month, allowing us to efficiently utilize system resources and reduce the overall time taken for data extraction. By default, the number of workers is set to 3, but it can be adjusted based on the system's capabilities and the expected load. The as_completed function is used to process the results as they become available, allowing for better error handling and efficient resource management.
     with ThreadPoolExecutor(max_workers=int(settings.MAX_WORKERS)) as executor:
       for year in range(start_year, current_year + 1):
         start_month = 1 if year != 2013 else 3 # this is hardcoded to start from March 2013, to accomodate the data available on openinsider.com
         end_month = current_month if year == current_year else 12 # end_month is current month if it is the current year, otherwise it is December
         if daily_sync and year == current_year: # for daily sync only
           start_month = current_month
-        for month in range(start_month, end_month + 1):
+        for month in range(start_month, end_month + 1): # for each month in the year, we will scrape the data for that month, and we will do this concurrently for different months using ThreadPoolExecutor
           if daily_sync and year == current_year and month == current_month: # for daily sync only
-            start_date = end_date = datetime(year, month, current_day - 1).strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
+            yesterday = datetime.now() - timedelta(days=1)  # for daily sync, we only scrape data for yesterday
+            start_date = end_date = datetime(yesterday.year, yesterday.month, yesterday.day).strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
           else:
-            start_date = datetime(year, month, 1).strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
-            end_date = datetime(year, month, current_day - 1) if month == end_month else (datetime(year, month, 1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+            # for bootstrapping by month
+            start_date = datetime(year, month, 1).strftime('%m/%d/%Y') # 1st day of the month of the year formatted as MM/DD/YYYY
+            end_date = datetime.now() - timedelta(days=1) if month == end_month else (datetime(year, month, 1) + timedelta(days=32)).replace(day=1) - timedelta(days=1) # if current month is the end_month, then the end_date is current_day - 1 (previous day), otherwise it is the last day of the month, which is calculated by getting the first day of the next month and subtracting one day from it
             end_date = end_date.strftime('%m/%d/%Y') # formatting as MM/DD/YYYY
 
-          # after getting start_date and end_date, scrape the data and pass it to the thread, which means every thread will scrape data for a specific month
+          # after getting start_date and end_date, scrape the data and pass it to the thread, which means every thread will scrape data for a specific month and write to a separate CSV file for that month
           futures.append(executor.submit(scrape_data_by_date_range, start_date, end_date)) 
 
           # Process futures as they complete
@@ -110,27 +130,21 @@ def extract_data(start_year: int, daily_sync: bool = False):
                 return False
             except Exception as e:
                 print(f"Error occurred while processing data: {e}")
-
-        # # Write to CSV
-        # try: 
-        #   if daily_sync: # for daily sync
-        #      filename = f"openinsider_{current_year}_{current_month}_{current_day}.csv"
-        #   else: # for bootstrap 
-        #       filename = settings.OUTPUT_FILE # for bootstrap 
-        #   with open(filename, 'w', newline='') as f:
-        #     print("Writing to CSV file...")
-        #     writer = csv.writer(f)
-        #     writer.writerow(COLUMN_HEADERS)
-        #     writer.writerows(data)
-        #   print(f"CSV file '{filename}' saved successfully!")
-        # except IOError as e:
-        #   raise IOError(f"Error writing to CSV file: {str(e)}")
   except Exception as e:
     print(f"Unexpected error in extract_data: {str(e)}")
     raise
   return True  # return True if the extraction was successful
 
 def scrape_data_by_date_range(start_date, end_date):
+  """
+  Scrapes insider trading data from openinsider.com for a given date range. This is very custom. 
+  Parameters:
+  start_date (str): The start date of the range in MM/DD/YYYY format.
+  end_date (str): The end date of the range in MM/DD/YYYY format.
+  Returns:
+  list: A list of cleaned rows containing insider trading data.
+  Raises:
+  """
   # url = f'http://openinsider.com/screener?fd=-{fd}&fdr={start_date}+-+{end_date}&td={td}&cnt=5000&page=1' # sample
   url = f"{settings.BASE_URL}?fd=-{settings.DEFAULT_FILLING_DAYS}&fdr={start_date}+-+{end_date}&td={settings.TRADE_DATE_FILTER}&cnt={settings.MAX_ROWS}&page=1"
   print(f"Scraping data from {url}")
@@ -149,7 +163,7 @@ def scrape_data_by_date_range(start_date, end_date):
     cleaned_row = []
     for idx, col_header in enumerate(COLUMN_HEADERS):
       ele = cols[idx].find('a').text.strip() if cols[idx].find('a') else cols[idx].text.strip()
-      cleaned_row.insert(idx,ele)
+      cleaned_row.insert(idx, ele)
     cleaned_rows.append(cleaned_row)
   if cleaned_rows:
     year_obj = datetime.strptime(start_date, '%m/%d/%Y').year
@@ -189,13 +203,11 @@ def import_data(db: Session, daily_sync: bool = False):
     # Filter files based on the naming convention
     files = [f for f in files if f.startswith("openinsider_") and f.endswith(".csv")]
   else: # for daily sync, we only import the latest file
-    year = datetime.now().year
-    month = datetime.now().month
-    current_day = datetime.now().day
-    filename = f"openinsider_{year}_{month:02d}_{current_day:02d}.csv"
-    files = [filename] # this is a placeholder, we will replace it with the actual file name
+    yesterday = datetime.now() - timedelta(days=1)
+    filename = f"openinsider_{yesterday.year}_{yesterday.month:02d}_{yesterday.day:02d}.csv"
+    files = [filename] # set the filest to be imported to be the file for yesterday, which is generated by the daily sync data extraction
 
-  for file in files:
+  for file in files: # todo: should we be ordering them by date to make sure the data is imported in the correct order?
     file_name = os.path.join(settings.OUTPUT_DIR, file)
     with ThreadPoolExecutor(max_workers=int(settings.MAX_WORKERS)) as executor:
       future = executor.submit(import_file_db, db, file_name)
@@ -248,6 +260,7 @@ def force_refresh(db: Session, start_year: int):
   """
   try:
     clear_data(db)                              # Wipe data clean from the database
+    archive_files()                             # Archive the files in the output directory after the data is cleared from the database
     bootstrap_data(db, start_year, False)       # Bootstrapping the data       
   except Exception as e:                        # Handle exceptions that might occur during the refresh
     print(f"Failed to force refresh: {str(e)}")

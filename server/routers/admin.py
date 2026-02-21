@@ -24,7 +24,7 @@ async def generate_client_id(current_user: authSchema.Client = Security(get_curr
 async def bootstrap(current_user: authSchema.Client = Security(get_current_client, scopes=["admin"]),data_params: schema.DataParams = Depends(), db: Session = Depends(get_db)):
   try:
     start_year = data_params.start_year  # Extract the start_year from the validated Pydantic model
-    transact_mgr.force_refresh(db, data_params.start_year) # Call the force_refresh function
+    transact_mgr.force_refresh(db, start_year) # Call the force_refresh function
   except Exception as e:
     raise exceptions.internal_server_exception(detail="A generic error occurred on the server.")
 

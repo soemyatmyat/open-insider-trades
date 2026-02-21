@@ -36,8 +36,8 @@ RATE_LIMIT_CONFIG = {
 BASE_URL=os.environ.get("BASE_URL")
 DEFAULT_FILLING_DAYS=os.environ.get("DEFAULT_FILLING_DAYS")
 TRADE_DATE_FILTER=os.environ.get("TRADE_DATE_FILTER")
-MAX_WORKERS=os.environ.get("MAX_WORKERS")
-OUTPUT_DIR=os.path.join(basedir, os.environ.get("OUTPUT_DIR"))
+MAX_WORKERS=os.environ.get("MAX_WORKERS", 3) # default is 3 workers for concurrent processing
+OUTPUT_DIR=os.path.join(basedir, os.environ.get("OUTPUT_DIR", "out"))
 COLUMN_HEADERS=os.environ.get("COLUMN_HEADERS")
 MAX_ROWS=os.environ.get("MAX_ROWS")
 
