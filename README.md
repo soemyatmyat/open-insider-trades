@@ -50,7 +50,7 @@ If the count is greater than or equal to the allowed limit, block the request. O
 |--------------------------------|--------|----------------------------------------------------------------------------------|
 | **Force Refresh / Bootstrapping** | ✅     | `POST /admin/bootstrap` - Run scraping script to refresh data                  |
 | **Generate Client ID**         | ✅     | `POST /admin/generate_client_id` - Returns a one-time-use ID and password      |
-| **Daily Sync**                 | ✅     | Enabled by default - runs at midnight UTC (not exposed as an endpoint)         |
+| **Daily Sync**                 | ✅     | Enabled by default - runs at every morning server time (not exposed as an endpoint)         |
 | **Enable/Disable Daily Sync** | ✅      | Toggle daily sync task                               |
 | **Dump Data to CSV**           | 🚧     | Planned - export DB contents to CSV                                            |
 | **Bulk Upload (CSV)**          | 🚧     | Planned - file limit ~5MB                                                      |
@@ -84,8 +84,12 @@ curl --verbose -b cookies.txt -c cookies.txt -X POST \
 
 ### Additional Notes
 
-- **Bootstrapping** triggers scraping from [openinsider.com](http://openinsider.com) and imports data starting from `2003-01-01` (configurable). 
-- **Daily Sync** runs every midnight (UTC) to pull and ingest new data automatically.
+- **Bootstrapping** initiates data scraping from openinsider.com
+ and imports historical data starting from 2003-01-01 (configurable).
+    - Scraped data is saved to {{OUTPUT_DIR}} using the file naming convention: openinsider_{{yyyy_mm_dd}}.csv.
+    - If files already exist (e.g., during a force refresh or re-bootstrap), they are automatically moved to an archive folder: {{OUTPUT_DIR}}/archive_openinsider_{{yyyy_mm_dd}}.
+- **Daily Sync** runs every morning (UTC) to pull and ingest new data automatically. The time is configurable. 
+    - Each data extract excludes today’s data; the most recent available data corresponds to yesterday.
 
 ## How to Run Locally
 
@@ -184,6 +188,7 @@ open-insider-trades/
 │  ├── .env                      # Environment variables
 │  ├── .dockerignore             # Files ignored during Docker build
 │  └── out                       # Folder to store the scrapped data 
+│     └── openinsider_yyyy_mm_dd.csv # csv files 
 ├── .gitignore                   # Git ignored files
 ├── build.sh                     # Shell script to run the app locally
 ├── .env                         # Redis environment variables
