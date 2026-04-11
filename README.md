@@ -8,13 +8,14 @@ This project provides API endpoints to retrieve insider trading transactions (SE
 - BeautifulSoup – for web scraping from openinsider.com.
 - SQLAlchemy – for ORM-based database interactions.
 - SQLite3 – as the primary database.
-- Redis – used for rate limiting and caching. Rate limit parameters are defined in the settings and are role-based, allowing different limits per user (useful when a user can create multiple keys). The rate limiting uses a sliding window approach:
+- Redis – used for refresh token storage and rate limiting. Refresh tokens are stored as `refresh:{token}` keys with a 7-day TTL so they survive restarts. Rate limit parameters are defined in the settings and are role-based, allowing different limits per user (useful when a user can create multiple keys). The rate limiting uses a sliding window approach:
 Sliding Window Mechanism:
 (1) Store timestamps of recent requests within the last n seconds.
 For each incoming request:
 (2) Remove timestamps older than n seconds.
 (3) Count the remaining timestamps.
 If the count is greater than or equal to the allowed limit, block the request. Otherwise, allow it and log the new timestamp.
+Both refresh token storage and rate limiting fall back gracefully to in-memory/SQLite if Redis is unavailable.
 - [JWT Authentication](https://datatracker.ietf.org/doc/html/rfc7519) with refresh_token
 - [APScheduler](https://apscheduler.readthedocs.io/en/3.x/userguide.html) for cron job trigger embedded into the FastAPI. This is not a scalable approach. A better solution would be to containerize the cron jobs OR better yet, implement celery + redis. 
 
@@ -24,7 +25,7 @@ If the count is greater than or equal to the allowed limit, block the request. O
 | Feature                         | Status | Notes                                                                 |
 |---------------------------------|--------|-----------------------------------------------------------------------|
 | **JWT Authentication**          | ✅     | Access token in `Authorization` header; refresh token in cookie      |
-| **Refresh Token in Cookie**     | ✅     | Stored in `HttpOnly` cookie to prevent JavaScript access             |
+| **Refresh Token in Cookie**     | ✅     | Stored in `HttpOnly` cookie; server-side token backed by Redis (falls back to in-memory) |
 | **CSRF Protection**             | ✅     | CSRF token in cookie + `X-CSRF-Token` header                |
 | **Rate Limiting (per client)**  | ✅     | Sliding window; Redis-backed with SQLite fallback                    |
 | **Custom Error Handling**       | ✅     | Clean JSON error responses with consistent structure                 |
@@ -90,6 +91,24 @@ curl --verbose -b cookies.txt -c cookies.txt -X POST \
     - If files already exist (e.g., during a force refresh or re-bootstrap), they are automatically moved to an archive folder: {{OUTPUT_DIR}}/archive_openinsider_{{yyyy_mm_dd}}.
 - **Daily Sync** runs every morning (UTC) to pull and ingest new data automatically. The time is configurable. 
     - Each data extract excludes today’s data; the most recent available data corresponds to yesterday.
+
+## Testing
+
+Unit and integration tests cover the token utilities, auth service, and auth API endpoints. Tests use an in-memory SQLite database and do not require Redis or a running server.
+
+```bash
+cd open-insider-trades/server
+pip install pytest httpx
+pytest tests/ -v
+```
+
+| Test File                  | Coverage                                                                 |
+|----------------------------|--------------------------------------------------------------------------|
+| `tests/test_token.py`      | JWT creation, decoding, expiry, revocation                               |
+| `tests/test_auth_service.py` | Client creation, lookup, authentication (success/wrong password/inactive) |
+| `tests/test_auth_router.py`  | Login, refresh token flow, CSRF validation, logout                      |
+
+---
 
 ## How to Run Locally
 
@@ -183,11 +202,17 @@ open-insider-trades/
 │  │       └── token.py 
 │  ├── scheduler/                # 5/ For scheduling logic
 │  │   └── scheduler.py          # configure and start APScheduler which triggers the daily extracting of insider trades 
+│  ├── tests/                    # 6/ Unit and integration tests
+│  │   ├── conftest.py           # Shared fixtures (in-memory DB, test client, state cleanup)
+│  │   ├── test_token.py         # JWT utility tests
+│  │   ├── test_auth_service.py  # Auth service tests
+│  │   └── test_auth_router.py   # Auth endpoint tests
+│  ├── pytest.ini                # Pytest configuration
 │  ├── requirements.txt          # Libraries Dependencies
 │  ├── Dockerfile                # Docker configuration
 │  ├── .env                      # Environment variables
 │  ├── .dockerignore             # Files ignored during Docker build
-│  └── out                       # Folder to store the scrapped data 
+│  └── out                       # Folder to store the scrapped data
 │     └── openinsider_yyyy_mm_dd.csv # csv files 
 ├── .gitignore                   # Git ignored files
 ├── build.sh                     # Shell script to run the app locally
